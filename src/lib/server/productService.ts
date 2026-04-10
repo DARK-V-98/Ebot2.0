@@ -33,7 +33,7 @@ export async function searchProducts(businessId: string, keywords: string[] = []
         const separator = url.includes('?') ? '&' : '?';
         const finalUrl = `${url}${url.includes('per_page') ? '' : `${separator}per_page=1000&limit=1000`}`;
 
-        const res = await axios.get(finalUrl, { headers, timeout: 5000 });
+        const res = await axios.get(finalUrl, { headers, timeout: 20000 });
         const resData = res.data;
         products = Array.isArray(resData) ? resData : (resData.data || []);
         
@@ -42,7 +42,7 @@ export async function searchProducts(businessId: string, keywords: string[] = []
           id: p.id || p.name,
           name: p.name || p.title,
           price: p.discount_price || p.price,
-          description: p.description || p.name_sinhala || '',
+          description: p.description || p.name_sinhala || p.short_description || '',
           category: p.category_name || p.category || 'General',
           stock: p.quantity || p.stock || 0,
           image_url: p.image_url || null
@@ -53,7 +53,12 @@ export async function searchProducts(businessId: string, keywords: string[] = []
       }
     }
   } catch (err: any) {
-    console.error(`[productService] External search failed: ${err.message}. Falling back to local.`);
+    console.error(`[productService] External search failed: ${err.message}. Checking stale cache...`);
+    const cached = externalCache.get(`${businessId}_external`);
+    if (cached) {
+      console.log(`[productService] Using stale cache for ${businessId} as fallback.`);
+      products = cached.data;
+    }
   }
 
   // 2. Fallback to local products if external is empty or failed

@@ -1,7 +1,7 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { getConversations } from '@/lib/api';
-import { MessageSquare, Search, Phone, Calendar, Hash, ArrowLeft, Bot, User } from 'lucide-react';
+import { MessageSquare, Search, Phone, Calendar, Hash, ArrowLeft, Bot, User, ShieldCheck } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';

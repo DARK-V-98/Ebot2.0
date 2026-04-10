@@ -130,24 +130,24 @@ export async function getOrderStats(businessId: string) {
     results[s] = snap.data().count;
   }
 
-  const totalSnap = await db.collection('orders').where('business_id', '==', businessId).count().get();
-  
   const ordersSnap = await db.collection('orders').where('business_id', '==', businessId).get();
   let revenue = 0;
+  let totalCount = 0;
+  const todayStartStr = new Date();
+  todayStartStr.setHours(0, 0, 0, 0);
+  const todayIso = todayStartStr.toISOString();
+  let todayCount = 0;
+
   ordersSnap.docs.forEach(doc => {
     const d = doc.data();
+    totalCount++;
     if (d.status !== 'cancelled') {
-        revenue += parseFloat(d.total_price) || 0;
+      revenue += parseFloat(d.total_price) || 0;
+    }
+    if (d.created_at >= todayIso) {
+      todayCount++;
     }
   });
 
-  const todayStartStr = new Date();
-  todayStartStr.setHours(0,0,0,0);
-  
-  const todaySnap = await db.collection('orders')
-    .where('business_id', '==', businessId)
-    .where('created_at', '>=', todayStartStr.toISOString())
-    .get();
-
-  return { ...results, total: totalCount, revenue, today: todaySnap.size };
+  return { ...results, total: totalCount, revenue, today: todayCount };
 }

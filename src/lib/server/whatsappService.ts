@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { db } from './firebaseAdmin';
+import { db } from '../firebase/firebaseAdmin';
 
 export async function sendMessage(businessId: string, to: string, text: string) {
   try {

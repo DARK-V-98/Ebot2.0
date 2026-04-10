@@ -25,7 +25,7 @@ let sock;
 let isReconnecting = false;
 
 async function startBot() {
-  console.log("🚀 Initializing eBot Worker...");
+  console.log("🚀 eBot Bridge Starting...");
   
   const { state, saveCreds } = await useMultiFileAuthState(WALLET_AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
@@ -40,21 +40,16 @@ async function startBot() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  // --- Real-time Dashboard Sync ---
   const snapshot = await db.collection('businesses').where('email', '==', TARGET_EMAIL).limit(1).get();
   if (snapshot.empty) return console.error("❌ Business not found in Firestore.");
   const bizRef = snapshot.docs[0].ref;
 
-  // Listen for "Disconnect" command from Dashboard
   bizRef.onSnapshot(async (doc) => {
     const data = doc.data();
     if (data.whatsapp_status === 'disconnected' && sock?.user && !isReconnecting) {
-      console.log("🛑 DISCONNECT COMMAND RECEIVED FROM DASHBOARD");
       await sock.logout();
-      if (fs.existsSync(WALLET_AUTH_DIR)) {
-        fs.rmSync(WALLET_AUTH_DIR, { recursive: true, force: true });
-      }
-      process.exit(0); // Exit so you can restart clean
+      if (fs.existsSync(WALLET_AUTH_DIR)) fs.rmSync(WALLET_AUTH_DIR, { recursive: true, force: true });
+      process.exit(0);
     }
   });
 
@@ -62,30 +57,21 @@ async function startBot() {
     const { connection, lastDisconnect, qr } = update;
     
     if (qr) {
-      console.log('📷 QR Code generated.');
       const qrDataUrl = await QRCode.toDataURL(qr);
       await bizRef.update({ whatsapp_qr: qrDataUrl, whatsapp_status: 'disconnected' });
     }
 
     if (connection === 'open') {
-      console.log('✅ Connected to WhatsApp!');
+      console.log('✅ AI BOT IS LIVE ON YOUR PHONE!');
       await bizRef.update({ whatsapp_status: 'connected', whatsapp_qr: null });
     }
 
     if (connection === 'close') {
       const code = (lastDisconnect.error instanceof Boom)?.output?.statusCode;
-      const shouldReconnect = code !== DisconnectReason.loggedOut;
-      console.log(`Connection closed (Code: ${code}). Reconnecting: ${shouldReconnect}`);
-      
-      if (shouldReconnect) {
-        isReconnecting = true;
-        setTimeout(startBot, 5000);
-      } else {
-        await bizRef.update({ whatsapp_status: 'disconnected', whatsapp_qr: null });
-        if (fs.existsSync(WALLET_AUTH_DIR)) {
-          fs.rmSync(WALLET_AUTH_DIR, { recursive: true, force: true });
-        }
+      if (code === 401 || code === 400) {
+        if (fs.existsSync(WALLET_AUTH_DIR)) fs.rmSync(WALLET_AUTH_DIR, { recursive: true, force: true });
       }
+      setTimeout(startBot, 5000);
     }
   });
 
@@ -97,23 +83,38 @@ async function startBot() {
     const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
     if (!text) return;
 
-    try {
-      // Use your defined domain or local development server
-      const apiBase = process.env.NEXT_PUBLIC_SITE_URL || 'http://127.0.0.1:3000';
+    console.log(`\n💬 Customer: ${text}`);
 
-      const response = await axios.post(`${apiBase}/api/simulator`, {
-        message: text,
-        phone: jid.split('@')[0],
-        name: msg.pushName || 'Customer'
-      }, {
-        headers: { 'Authorization': 'Bearer dev-token' }
-      });
+    const payload = {
+      message: text,
+      phone: jid.split('@')[0],
+      name: msg.pushName || 'Customer'
+    };
+    const headers = { 'Authorization': 'Bearer dev-token' };
 
-      if (response.data.reply) {
-        await sock.sendMessage(jid, { text: response.data.reply });
+    // TRY LIVE FIRST, FALLBACK TO LOCAL
+    const urls = [
+      process.env.NEXT_PUBLIC_SITE_URL,
+      'http://127.0.0.1:3000'
+    ].filter(Boolean);
+
+    let replied = false;
+    for (const url of urls) {
+      if (replied) break;
+      try {
+        const response = await axios.post(`${url}/api/simulator`, payload, { headers, timeout: 60000 });
+        if (response.data.reply) {
+          console.log(`🤖 AI (${url}): ${response.data.reply}`);
+          await sock.sendMessage(jid, { text: response.data.reply });
+          replied = true;
+        }
+      } catch (err) {
+        // Silently try next URL if one fails
       }
-    } catch (err) {
-      console.error("❌ Reply Error:", err.message);
+    }
+
+    if (!replied) {
+      console.error("❌ Could not connect to your website (Make sure it is deployed or local is running).");
     }
   });
 }

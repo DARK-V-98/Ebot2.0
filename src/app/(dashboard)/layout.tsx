@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { href: '/orders', label: 'Sales', icon: ShoppingCart },
   { href: '/products', label: 'Inventory', icon: Package },
   { href: '/customers', label: 'Partners', icon: Users },
+  { href: '/simulator', label: 'Simulator', icon: Bot },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

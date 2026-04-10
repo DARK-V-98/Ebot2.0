@@ -34,7 +34,7 @@ export async function updateSession(customerId: string, state: string, context =
   });
 }
 
-export async function processMessage({ businessId, businessName, phone, contactName, messageText, whatsappMsgId }: any) {
+export async function processMessage({ businessId, businessName, phone, contactName, messageText, whatsappMsgId, isSimulation = false }: any) {
   const customer: any = await userService.findOrCreateCustomer(businessId, phone, contactName);
 
   const { language, intent, extracted_keywords } = await aiService.detectLanguageAndIntent(messageText);
@@ -163,7 +163,9 @@ export async function processMessage({ businessId, businessName, phone, contactN
     language:   language !== 'unknown' ? language : customer.language,
   });
 
-  await whatsappService.sendMessage(businessId, phone, reply);
+  if (!isSimulation) {
+    await whatsappService.sendMessage(businessId, phone, reply);
+  }
 
   return reply;
 }

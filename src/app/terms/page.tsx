@@ -37,7 +37,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-xl font-black text-slate-900 mb-3">5. Disclaimer of Warranties</h2>
             <p>
-              The service is provided on an "as is" and "as available" basis. E BOT 2.1 makes no warranties, expressed or implied, regarding the accuracy of AI-generated responses or the uninterrupted functionality of the WhatsApp integration.
+              The service is provided on an &quot;as is&quot; and &quot;as available&quot; basis. E BOT 2.1 makes no warranties, expressed or implied, regarding the accuracy of AI-generated responses or the uninterrupted functionality of the WhatsApp integration.
             </p>
           </section>
 

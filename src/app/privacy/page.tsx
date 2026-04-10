@@ -9,7 +9,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-black text-slate-900 mb-3">1. Introduction</h2>
             <p>
-              Welcome to E BOT 2.1 ("we", "our", or "us"). We are committed to protecting your personal information and your right to privacy.
+              Welcome to E BOT 2.1 (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;). We are committed to protecting your personal information and your right to privacy.
               If you have any questions or concerns about our policy, or our practices with regards to your personal information, please contact us.
             </p>
           </section>

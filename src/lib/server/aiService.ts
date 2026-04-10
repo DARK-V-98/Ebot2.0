@@ -1,6 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// Auto-scrub the key to remove accidental spaces or newlines that break the API
+const rawKey = process.env.GEMINI_API_KEY || '';
+const cleanKey = rawKey.replace(/['"]+/g, '').trim();
+
+const genAI = new GoogleGenerativeAI(cleanKey);
 
 export async function detectLanguageAndIntent(messageText: string) {
   const modelsToTry = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro'];

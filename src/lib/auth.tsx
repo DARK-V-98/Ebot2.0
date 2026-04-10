@@ -2,7 +2,7 @@
 'use client';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import Cookies from 'js-cookie';
-import { login as apiLogin, getMe } from './api';
+import { login as apiLogin, register as apiRegister, getMe } from './api';
 
 interface Business {
   id: string;
@@ -17,6 +17,7 @@ interface AuthContextType {
   business: Business | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -44,6 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setBusiness(data.business);
   };
 
+  const register = async (name: string, email: string, password: string) => {
+    const data = await apiRegister(name, email, password);
+    Cookies.set('token', data.token, { expires: 7, sameSite: 'lax', path: '/' });
+    setBusiness(data.business);
+  };
+
   const logout = () => {
     Cookies.remove('token', { path: '/' });
     setBusiness(null);
@@ -51,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ business, loading, login, logout }}>
+    <AuthContext.Provider value={{ business, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

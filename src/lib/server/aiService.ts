@@ -7,7 +7,13 @@ const cleanKey = rawKey.replace(/['"]+/g, '').trim();
 const genAI = new GoogleGenerativeAI(cleanKey);
 
 export async function detectLanguageAndIntent(messageText: string) {
-  const modelsToTry = ['models/gemini-2.0-flash', 'models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro'];
+  const modelsToTry = [
+    'models/gemini-2.0-pro-exp-02-05',
+    'models/gemini-2.0-flash',
+    'models/gemini-1.5-flash',
+    'models/gemini-1.5-pro',
+    'models/gemini-pro'
+  ];
   let lastError = null;
 
   for (const modelName of modelsToTry) {
@@ -48,7 +54,13 @@ Rules:
 }
 
 export async function generateReply({ userMessage, language, intent, businessName, products, sessionContext, history }: any) {
-  const modelsToTry = ['models/gemini-2.0-flash', 'models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro'];
+  const modelsToTry = [
+    'models/gemini-2.0-pro-exp-02-05',
+    'models/gemini-2.0-flash',
+    'models/gemini-1.5-flash',
+    'models/gemini-1.5-pro',
+    'models/gemini-pro'
+  ];
   let lastError = null;
 
   const productList = products && products.length

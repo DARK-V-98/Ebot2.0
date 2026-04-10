@@ -108,10 +108,6 @@ export async function POST(req: NextRequest) {
     let updated = 0;
     const now = new Date().toISOString();
 
-    let created = 0;
-    let updated = 0;
-    const now = new Date().toISOString();
-
     // 4. Optimized Commit to Database (Bulk)
     // Fetch all existing product names for this business once to avoid N queries
     const existingSnap = await db.collection('products')

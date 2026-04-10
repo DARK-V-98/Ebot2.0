@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const reply = await processMessage({
       businessId: business.id,
-      businessName: business.name || 'Your Business',
+      businessName: 'Aarya Bathware',
       phone: phone || 'SIMULATOR',
       contactName: name || 'Admin Simulator',
       messageText: message,

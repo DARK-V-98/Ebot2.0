@@ -164,7 +164,7 @@ export async function processMessage({ businessId, businessName, phone, contactN
   });
 
   if (!isSimulation) {
-    if (products.length > 0 && intent === 'search_product') {
+    if (products.length > 0) {
       const rows = products.slice(0, 10).map((p: any) => ({
         id: `prod_${p.id}`,
         title: p.name.substring(0, 24),
@@ -175,8 +175,8 @@ export async function processMessage({ businessId, businessName, phone, contactN
         businessId, 
         phone, 
         reply,
-        'Select Product', 
-        [{ title: 'Available Items', rows }]
+        'Select Items', 
+        [{ title: 'Available Catalog', rows }]
       );
     } else {
       await whatsappService.sendMessage(businessId, phone, reply);

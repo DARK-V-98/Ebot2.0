@@ -84,8 +84,6 @@ Respond naturally based on intent:
     return result.response.text().trim();
   } catch (err: any) {
     console.error('[aiService] generateReply error:', err.message);
-    return language === 'sinhala'
-      ? 'සමාවෙන්න, දැනට ගැටලුවක් ඇත. කරුණාකර ටිකක් පසු නැවත උත්සාහ කරන්න.'
-      : 'Sorry, I\'m having trouble right now. Please try again in a moment! 🙏';
+    return `⚠️ AI Error: ${err.message}. (Check if your GEMINI_API_KEY is leaked or restricted)`;
   }
 }

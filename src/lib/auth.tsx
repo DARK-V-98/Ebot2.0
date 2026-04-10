@@ -11,6 +11,8 @@ interface Business {
   plan: string;
   api_key?: string;
   whatsapp_phone_id?: string;
+  package_status?: 'none' | 'pending' | 'active';
+  subscription_tier?: string;
 }
 
 interface AuthContextType {

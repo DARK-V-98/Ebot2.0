@@ -6,9 +6,14 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
-    const r = await axios.get('/api/admin/businesses', { headers: { Authorization: `Bearer ${token}` }});
-    return r.data;
-  };
+const getBusinesses = async (token: string) => {
+  const r = await axios.get('/api/admin/businesses', { headers: { Authorization: `Bearer ${token}` }});
+  return r.data;
+};
+
+export default function AdminBusinesses() {
+  const [search, setSearch] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const verifyBusiness = async (id: string) => {
     const token = document.cookie.match(new RegExp('(^| )token=([^;]+)'))?.[2] || '';

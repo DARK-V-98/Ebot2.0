@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Check, ShieldCheck, Zap, Crown, Phone, ArrowRight, RefreshCw, LogOut } from 'lucide-react';
-import { db } from '@/lib/firebase/firebase';
+import { db } from '@/lib/firebase/firebaseClient';
 import { doc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';

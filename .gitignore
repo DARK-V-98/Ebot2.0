@@ -4,6 +4,7 @@ node_modules/
 # next.js build output
 .next/
 out/
+/worker/
 
 # environment files (keep these secret)
 .env.local

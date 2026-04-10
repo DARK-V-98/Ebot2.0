@@ -2,25 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { processMessage } from '@/lib/server/brain';
 import { db } from '@/lib/firebase/firebaseAdmin';
 
-async function sendWhatsAppMessage(phoneNumberId: string, recipientPhone: string, token: string, message: string) {
-  try {
-    await fetch(`https://graph.facebook.com/v18.0/${phoneNumberId}/messages`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: recipientPhone,
-        type: 'text',
-        text: { body: message },
-      }),
-    });
-  } catch (err: any) {
-    console.error('[webhook] Failed to send WhatsApp message:', err.message);
-  }
-}
+
 
 async function getBusinessByPhoneId(phoneNumberId: string) {
   const snapshot = await db.collection('businesses')
@@ -82,31 +64,41 @@ export async function POST(req: NextRequest) {
           }
 
           for (const msg of value.messages) {
-            if (msg.type !== 'text') continue;
+            let msgText = '';
+            
+            // Handle standard text messages
+            if (msg.type === 'text') {
+              msgText = msg.text?.body || '';
+            } 
+            // Handle List selection clicks
+            else if (msg.type === 'interactive' && msg.interactive?.list_reply) {
+              const selectionId = msg.interactive.list_reply.id; // e.g., "prod_123"
+              msgText = selectionId.startsWith('prod_') 
+                ? selectionId.replace('prod_', '') 
+                : msg.interactive.list_reply.title;
+              
+              console.log(`[webhook] User selected item: ${selectionId} (${msgText})`);
+            } else {
+              continue; // Skip images, audio, etc. for now
+            }
 
             const waId = msg.from;
             const msgId = msg.id;
-            const msgText = msg.text?.body || '';
             const contactName = value.contacts?.[0]?.profile?.name || null;
 
             console.log(`[webhook] [${business.name}] ${waId}: ${msgText}`);
 
             try {
-              const reply = await processMessage({
+              // The brain ALREADY sends the WhatsApp message (including interactive support)
+              await processMessage({
                 businessId: business.id,
                 businessName: business.name,
                 phone: waId,
                 contactName,
                 messageText: msgText,
                 whatsappMsgId: msgId,
+                isSimulation: false // Ensure live sending
               });
-
-              await sendWhatsAppMessage(
-                phoneNumberId,
-                waId,
-                business.whatsapp_token,
-                reply
-              );
             } catch (err: any) {
               console.error(`[webhook] Error processing message from ${waId}:`, err.message);
             }

@@ -21,6 +21,10 @@ export async function GET(req: NextRequest) {
       external_inventory_url: data.external_inventory_url,
       external_inventory_key: data.external_inventory_key,
       external_inventory_header: data.external_inventory_header,
+      external_categories_url: data.external_categories_url,
+      external_categories_key: data.external_categories_key,
+      external_categories_header: data.external_categories_header,
+      verify_token: data.verify_token,
       created_at: data.created_at,
       api_key: data.api_key
     }, { status: 200 });

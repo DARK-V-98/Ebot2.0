@@ -8,6 +8,8 @@ out/
 # environment files (keep these secret)
 .env.local
 .env*.local
+*.json
+auth_info_baileys/
 
 # debug logs
 npm-debug.log*

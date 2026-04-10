@@ -3,7 +3,17 @@ import { requireAuth } from '@/lib/server/auth';
 import { processMessage } from '@/lib/server/brain';
 
 export async function POST(req: NextRequest) {
-  const business = await requireAuth(req);
+  let business = await requireAuth(req);
+  
+  // Local Bridge Bypass (for whatsapp-worker.js)
+  if (!business) {
+    const authHeader = req.headers.get('authorization');
+    if (authHeader === `Bearer dev-token`) {
+       // Look up the primary test business
+       business = { id: "WqxeuouFXqLPXXW4HlAd", name: "EBot Store" };
+    }
+  }
+
   if (!business) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {

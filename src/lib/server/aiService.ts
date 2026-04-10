@@ -10,10 +10,13 @@ const openai = new OpenAI({ apiKey: cleanKey(process.env.OPENAI_API_KEY || '') }
 
 export async function detectLanguageAndIntent(messageText: string) {
   const geminiModels = [
+    'models/gemini-3.1-pro-preview',
+    'models/gemini-3-pro-preview',
+    'models/gemini-2.5-pro',
+    'models/gemini-2.5-flash',
+    'models/gemini-2.0-flash',
     'gemini-1.5-pro-latest',
-    'gemini-1.5-flash-latest',
-    'gemini-2.0-flash-exp',
-    'gemini-pro'
+    'gemini-1.5-flash-latest'
   ];
 
   const prompt = `
@@ -70,10 +73,13 @@ Rules:
 
 export async function generateReply({ userMessage, language, intent, businessName, products, sessionContext, history }: any) {
   const geminiModels = [
+    'models/gemini-3.1-pro-preview',
+    'models/gemini-3-pro-preview',
+    'models/gemini-2.5-pro',
+    'models/gemini-2.5-flash',
+    'models/gemini-2.0-flash',
     'gemini-1.5-pro-latest',
-    'gemini-1.5-flash-latest',
-    'gemini-2.0-flash-exp',
-    'gemini-pro'
+    'gemini-1.5-flash-latest'
   ];
 
   const productList = products && products.length

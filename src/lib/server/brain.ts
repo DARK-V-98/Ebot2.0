@@ -37,7 +37,7 @@ export async function updateSession(customerId: string, state: string, context =
 export async function processMessage({ businessId, businessName, phone, contactName, messageText, whatsappMsgId, isSimulation = false }: any) {
   const customer: any = await userService.findOrCreateCustomer(businessId, phone, contactName);
 
-  const { language, intent, extracted_keywords } = await aiService.detectLanguageAndIntent(messageText);
+  const { language, intent, extracted_keywords, translation } = await aiService.detectLanguageAndIntent(messageText);
 
   if (language !== 'unknown' && customer.language !== language) {
     await userService.updateCustomerLanguage(customer.id, language);
@@ -50,10 +50,18 @@ export async function processMessage({ businessId, businessName, phone, contactN
     direction: 'in',
     intent,
     language,
+    translation,
     whatsappMsgId,
   });
 
   const session: any = await getSession(customer.id);
+
+  // --- HANDOVER CHECK ---
+  if (session.state === 'handover' && intent !== 'cancel') {
+     console.log(`[brain] Handover active for ${phone}. AI is silent.`);
+     return null; 
+  }
+
   const context = session.context_json
     ? (typeof session.context_json === 'string' ? JSON.parse(session.context_json) : session.context_json)
     : {};
@@ -113,6 +121,11 @@ export async function processMessage({ businessId, businessName, phone, contactN
       newState = 'idle';
       context.pending_product_id = null;
       context.cart = null;
+      break;
+
+    case 'handover':
+      newState = 'handover';
+      context.last_intent = 'handover';
       break;
 
     case 'help':
@@ -183,5 +196,5 @@ export async function processMessage({ businessId, businessName, phone, contactN
     }
   }
 
-  return reply;
+  return { reply, products };
 }

@@ -50,8 +50,14 @@ export const getDashboardInsights = () =>
 export const getConversations = (params?: object) =>
   api.get('/api/messages', { params }).then(r => r.data);
 
-export const getCustomerMessages = (customerId: number, params?: object) =>
+export const getCustomerMessages = (customerId: string, params?: object) =>
   api.get(`/api/messages/${customerId}`, { params }).then(r => r.data);
+
+export const resetAISession = (customerId: string) =>
+  api.post(`/api/messages/${customerId}/reset`).then(r => r.data);
+
+export const deleteConversation = (customerId: string) =>
+  api.delete(`/api/messages/${customerId}`).then(r => r.data);
 
 // ── Orders ────────────────────────────────────────────────────────────────────
 export const getOrders = (params?: object) =>

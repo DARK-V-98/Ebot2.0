@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    const reply = await processMessage({
+    const { reply, products } = await processMessage({
       businessId: business.id,
       businessName: 'Aarya Bathware',
       phone: phone || 'SIMULATOR',
@@ -34,7 +34,11 @@ export async function POST(req: NextRequest) {
       isSimulation: true
     });
 
-    return NextResponse.json({ reply, timestamp: new Date().toISOString() });
+    return NextResponse.json({ 
+      reply, 
+      products: products || [],
+      timestamp: new Date().toISOString() 
+    });
   } catch (err: any) {
     console.error('[simulator] Error:', err.message);
     return NextResponse.json({ 

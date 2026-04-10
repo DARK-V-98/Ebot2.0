@@ -53,6 +53,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isDev = business?.email === 'tikfese@gmail.com';
   const isAdmin = isDev || business?.email?.includes('admin');
 
+  // --- PACKAGE GUARD ---
+  if (!isDev && business?.package_status !== 'active' && pathname !== '/select-package') {
+    router.replace('/select-package');
+    return (
+      <div className="h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-6" />
+        <p className="text-blue-600 font-bold uppercase tracking-widest text-xs">Verifying Subscription...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-white text-slate-900 font-sans">
       <Toaster position="top-right" gutter={8} containerStyle={{ top: 20 }} />

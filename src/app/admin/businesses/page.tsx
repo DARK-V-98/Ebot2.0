@@ -6,16 +6,23 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
-const getBusinesses = async (token: string) => {
-  const r = await axios.get('/api/admin/businesses', { headers: { Authorization: `Bearer ${token}` }});
-  return r.data;
-};
+    const r = await axios.get('/api/admin/businesses', { headers: { Authorization: `Bearer ${token}` }});
+    return r.data;
+  };
 
-export default function AdminBusinesses() {
-  const [search, setSearch] = useState('');
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const verifyBusiness = async (id: string) => {
+    const token = document.cookie.match(new RegExp('(^| )token=([^;]+)'))?.[2] || '';
+    toast.promise(
+      axios.post(`/api/admin/businesses/verify`, { id }, { headers: { Authorization: `Bearer ${token}` }}),
+      {
+        loading: 'Activating account...',
+        success: 'Business account activated! Access granted.',
+        error: 'Failed to activate. Please verify admin permissions.'
+      }
+    ).then(() => refetch());
+  };
 
-  const { data: businesses, isLoading } = useQuery({
+  const { data: businesses, isLoading, refetch } = useQuery({
     queryKey: ['admin-businesses'],
     queryFn: () => {
       const match = document.cookie.match(new RegExp('(^| )token=([^;]+)'));
@@ -31,12 +38,12 @@ export default function AdminBusinesses() {
   };
 
   const filtered = businesses?.filter((b: any) => 
-    b.name.toLowerCase().includes(search.toLowerCase()) || 
-    b.email.toLowerCase().includes(search.toLowerCase())
+    b.name?.toLowerCase().includes(search.toLowerCase()) || 
+    b.email?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="space-y-10 animate-slide-up max-w-7xl mx-auto">
+    <div className="space-y-10 animate-slide-up max-w-7xl mx-auto pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">Tenant Management</h1>
@@ -65,15 +72,17 @@ export default function AdminBusinesses() {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/50">
                 <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Business Identity</th>
-                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Deployment</th>
-                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Network Status</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Package Tier</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Subscription</th>
                 <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Registered</th>
-                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Access</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                 <tr><td colSpan={5} className="p-20 text-center"><div className="skeleton h-10 w-full rounded-2xl" /></td></tr>
+                Array.from({length: 5}).map((_, i) => (
+                  <tr key={i}><td colSpan={5} className="px-8 py-4"><div className="skeleton h-12 w-full rounded-2xl" /></td></tr>
+                ))
               ) : filtered?.length === 0 ? (
                  <tr>
                     <td colSpan={5} className="p-32 text-center">
@@ -97,21 +106,29 @@ export default function AdminBusinesses() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-8 text-center sm:text-left">
-                      <span className="px-4 py-1.5 rounded-full bg-slate-100 text-slate-900 text-[10px] font-black tracking-widest uppercase border border-slate-200">
-                        {b.plan || 'Free Tier'}
+                    <td className="px-8 py-8">
+                      <span className={clsx(
+                        "px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase border",
+                        b.subscription_tier === 'enterprise' ? "bg-slate-900 text-white border-slate-800" : "bg-slate-100 text-slate-900 border-slate-200"
+                      )}>
+                        {b.subscription_tier || 'No Package'}
                       </span>
                     </td>
                     <td className="px-8 py-8">
                       <div className="flex items-center gap-2">
-                        {b.whatsapp_phone_id ? (
+                        {b.package_status === 'active' ? (
                            <span className="flex items-center gap-2 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 uppercase tracking-widest shadow-sm">
                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> 
-                             Connection Active
+                             Active Account
+                           </span>
+                        ) : b.package_status === 'pending' ? (
+                           <span className="flex items-center gap-2 text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-100 uppercase tracking-widest shadow-sm">
+                             <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" /> 
+                             Awaiting Verification
                            </span>
                         ) : (
                            <span className="flex items-center gap-2 text-[10px] font-black text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 uppercase tracking-widest">
-                             System Offline
+                             Unsubscribed
                            </span>
                         )}
                       </div>
@@ -119,17 +136,27 @@ export default function AdminBusinesses() {
                     <td className="px-8 py-4 text-[11px] text-slate-600 font-black uppercase tracking-tighter">
                       {new Date(b.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-8 py-4 text-right">
-                       <button 
-                         onClick={() => copyKey(b.api_key, b.id)} 
-                         className={clsx(
-                           "px-5 py-3 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 ml-auto shadow-sm active:scale-95",
-                           copiedId === b.id ? "bg-red-600 text-white" : "bg-white text-slate-900 border border-slate-200 hover:border-red-600 hover:text-red-600"
-                         )}
-                       >
-                         {copiedId === b.id ? <Check size={14} strokeWidth={3} /> : <Copy size={14} strokeWidth={3} />}
-                         {copiedId === b.id ? 'COPIED' : 'KEY'}
-                       </button>
+                    <td className="px-8 py-4">
+                       <div className="flex items-center justify-end gap-3">
+                          {b.package_status === 'pending' && (
+                             <button 
+                               onClick={() => verifyBusiness(b.id)}
+                               className="px-5 py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:bg-black transition-all active:scale-95"
+                             >
+                               Verify Account
+                             </button>
+                          )}
+                          <button 
+                            onClick={() => copyKey(b.api_key, b.id)} 
+                            className={clsx(
+                              "px-5 py-3 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm active:scale-95",
+                              copiedId === b.id ? "bg-red-600 text-white" : "bg-white text-slate-900 border border-slate-200 hover:border-red-600 hover:text-red-600"
+                            )}
+                          >
+                            {copiedId === b.id ? <Check size={14} strokeWidth={3} /> : <Copy size={14} strokeWidth={3} />}
+                            {copiedId === b.id ? 'COPIED' : 'KEY'}
+                          </button>
+                       </div>
                     </td>
                   </tr>
                 ))

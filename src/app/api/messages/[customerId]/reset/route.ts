@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/server/auth';
-import { getCustomerMessages } from '@/lib/server/messageService';
 import { db } from '@/lib/firebase/firebaseAdmin';
 
-// GET: Fetch History
-export async function GET(req: NextRequest, { params }: { params: { customerId: string } }) {
+// POST: Reset AI (Continue AI)
+export async function POST(req: NextRequest, { params }: { params: { customerId: string } }) {
   const business = await requireAuth(req);
   if (!business) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const searchParams = req.nextUrl.searchParams;
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-
-    const data = await getCustomerMessages(business.id, params.customerId, { page, limit });
-    return NextResponse.json(data);
+    await db.collection('sessions').doc(params.customerId).update({
+      state: 'idle',
+      last_active: new Date().toISOString()
+    });
+    return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

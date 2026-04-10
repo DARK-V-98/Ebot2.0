@@ -2,19 +2,35 @@
 import { useQuery } from '@tanstack/react-query';
 import { getConversations } from '@/lib/api';
 import { MessageSquare, Search, Phone, Calendar, Hash, ArrowLeft, Bot, User } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ConversationsPage() {
   const [search, setSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastHandoverCount = useRef(0);
 
   const { data: conversations, isLoading } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => getConversations(),
     refetchInterval: 5000, 
   });
+
+  // Sound Alert Logic
+  useEffect(() => {
+    if (conversations) {
+      const currentHandoverCount = conversations.filter((c: any) => c.is_handover).length;
+      if (currentHandoverCount > lastHandoverCount.current) {
+        // Play alert sound
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(e => console.log('Audio blocked', e));
+      }
+      lastHandoverCount.current = currentHandoverCount;
+    }
+  }, [conversations]);
 
   const filtered = conversations?.filter((c: any) => 
     c.customer_name?.toLowerCase().includes(search.toLowerCase()) || 
@@ -71,27 +87,37 @@ export default function ConversationsPage() {
                 whileTap={{ scale: 0.98 }}
                 className={clsx(
                   "p-6 border-b border-slate-50 cursor-pointer transition-all flex gap-4 relative group",
-                  selectedCustomerId === c.customer_id ? "bg-blue-50/50" : "hover:bg-slate-50"
+                  selectedCustomerId === c.customer_id ? "bg-blue-50/50" : "hover:bg-slate-50",
+                  c.is_handover && "bg-red-50/30 animate-pulse border-l-4 border-l-red-600"
                 )}
               >
-                {selectedCustomerId === c.customer_id && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600 rounded-r-full" />}
-                <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg text-white font-black text-xl">
+                {selectedCustomerId === c.customer_id && !c.is_handover && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600 rounded-r-full" />}
+                <div className={clsx(
+                  "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg text-white font-black text-xl",
+                  c.is_handover ? "bg-red-600 shadow-red-500/20" : "bg-blue-600"
+                )}>
                   {c.customer_name?.charAt(0).toUpperCase() || <Phone size={22} />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-1">
                     <p className={clsx(
                       "text-sm font-black truncate transition-colors",
-                      selectedCustomerId === c.customer_id ? "text-blue-600" : "text-slate-900"
+                      c.is_handover ? "text-red-700" : (selectedCustomerId === c.customer_id ? "text-blue-600" : "text-slate-900")
                     )}>
                       {c.customer_name || `+${c.customer_phone}`}
                     </p>
-                    <span className="text-[10px] text-slate-400 font-black uppercase">
+                    {c.is_handover && (
+                      <span className="bg-red-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full ml-2">URGENT</span>
+                    )}
+                    <span className="text-[10px] text-slate-400 font-black uppercase ml-auto">
                       {new Date(c.messages[c.messages.length-1].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 truncate font-semibold">
-                    {c.messages[c.messages.length-1].content}
+                  <p className={clsx(
+                    "text-xs truncate font-semibold",
+                    c.is_handover ? "text-red-600" : "text-slate-500"
+                  )}>
+                    {c.is_handover ? "⚠️ CUSTOMER WAITING FOR YOU" : c.messages[c.messages.length-1].content}
                   </p>
                 </div>
               </motion.div>
@@ -125,14 +151,47 @@ export default function ConversationsPage() {
                </div>
                
                <div className="flex gap-3">
-                  <button title="Calendar" className="p-3 rounded-2xl bg-slate-50 text-slate-500 hover:text-blue-600 border border-slate-100 hover:bg-white transition-all shadow-sm">
-                     <Calendar size={20} />
-                  </button>
-                  <button title="Details" className="p-3 rounded-2xl bg-slate-50 text-slate-500 hover:text-blue-600 border border-slate-100 hover:bg-white transition-all shadow-sm">
+                  <button 
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to delete this chat history?')) {
+                        await deleteConversation(selectedCustomerId!);
+                        window.location.reload();
+                      }
+                    }}
+                    title="Delete Chat" 
+                    className="p-3 rounded-2xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-100 transition-all shadow-sm"
+                  >
                      <Hash size={20} />
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      await resetAISession(selectedCustomerId!);
+                      alert('AI Bot is back online for this customer!');
+                    }}
+                    title="Continue AI Bot" 
+                    className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg font-bold text-sm"
+                  >
+                     <Bot size={18} />
+                     <span>Continue AI</span>
                   </button>
                </div>
             </div>
+            
+            {/* Handover Notice */}
+            {selectedConv.messages.some((m: any) => m.intent === 'handover') && (
+              <div className="mx-8 mt-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div>
+                    <p className="text-amber-900 font-bold text-sm leading-none">AI is Paused</p>
+                    <p className="text-amber-600 text-[10px] uppercase font-black tracking-widest mt-1">Human Handover Active</p>
+                  </div>
+                </div>
+                <p className="text-[11px] text-amber-700/60 font-medium italic">Customer requested a real person.</p>
+              </div>
+            )}
             
             <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar scroll-smooth bg-slate-50/30">
                <div className="text-center py-4">
@@ -155,6 +214,13 @@ export default function ConversationsPage() {
                        )}>
                          {msg.content}
                        </div>
+                       
+                       {!isBot && msg.translation && (
+                         <div className="mt-2 text-[10px] text-slate-400 italic bg-slate-50 p-2 rounded-xl border border-slate-100 border-dashed">
+                           📝 Translation: {msg.translation}
+                         </div>
+                       )}
+
                        <div className={clsx("flex items-center gap-2 mt-2.5 px-2", isBot ? "justify-end" : "justify-start")}>
                          {isBot ? <Bot size={12} className="text-blue-600"/> : <User size={12} className="text-slate-400"/>}
                          <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">

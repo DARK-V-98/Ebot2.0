@@ -26,6 +26,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ reply, timestamp: new Date().toISOString() });
   } catch (err: any) {
     console.error('[simulator] Error:', err.message);
-    return NextResponse.json({ error: 'Internal server error processing simulation.' }, { status: 500 });
+    return NextResponse.json({ 
+      error: `Simulation Error: ${err.message}`,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
+    }, { status: 500 });
   }
 }

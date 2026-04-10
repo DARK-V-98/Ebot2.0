@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function detectLanguageAndIntent(messageText: string) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   const prompt = `
 You are a language and intent classifier for a WhatsApp commerce bot.
@@ -38,7 +38,7 @@ Rules:
 }
 
 export async function generateReply({ userMessage, language, intent, businessName, products, sessionContext, history }: any) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   const productList = products && products.length
     ? products.map((p: any) => `- ${p.name}: Rs.${p.price} (${p.category || 'General'})`).join('\n')

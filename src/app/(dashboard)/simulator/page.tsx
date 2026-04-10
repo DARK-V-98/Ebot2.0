@@ -50,11 +50,12 @@ export default function SimulatorPage() {
         time: res.data.timestamp
       }]);
     } catch (err: any) {
-      toast.error('Failed to get AI response');
+      const errorMsg = err.response?.data?.error || 'Failed to connect to Brain';
+      toast.error(errorMsg);
       setMessages(prev => [...prev, {
         id: Date.now().toString() + 'e',
         role: 'bot',
-        text: '🔥 System Error: Failed to connect to Brain. Check your Vercel keys.',
+        text: `🔥 System Error: ${errorMsg}`,
         time: new Date().toISOString()
       }]);
     } finally {

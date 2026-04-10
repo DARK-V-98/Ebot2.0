@@ -3,9 +3,13 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function detectLanguageAndIntent(messageText: string) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+  let lastError = null;
 
-  const prompt = `
+  for (const modelName of modelsToTry) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const prompt = `
 You are a language and intent classifier for a WhatsApp commerce bot.
 Analyze the following message and respond ONLY with valid JSON (no markdown, no extra text).
 
@@ -25,20 +29,23 @@ Rules:
 - "english" = standard English
 - Detect intent from context: product mentions = search_product, buy/order/ganna = place_order
 `;
-
-  try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
-    const clean = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(clean);
-  } catch (err: any) {
-    console.error('[aiService] detectLanguageAndIntent error:', err.message);
-    return { language: 'unknown', intent: 'unknown', extracted_keywords: [], confidence: 0 };
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      const clean = text.replace(/```json|```/g, '').trim();
+      return JSON.parse(clean);
+    } catch (err: any) {
+      console.warn(`[aiService] ${modelName} failed:`, err.message);
+      lastError = err;
+    }
   }
+
+  console.error('[aiService] All models failed in detectLanguageAndIntent');
+  return { language: 'unknown', intent: 'unknown', extracted_keywords: [], confidence: 0 };
 }
 
 export async function generateReply({ userMessage, language, intent, businessName, products, sessionContext, history }: any) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+  let lastError = null;
 
   const productList = products && products.length
     ? products.map((p: any) => `- ${p.name}: Rs.${p.price} (${p.category || 'General'})`).join('\n')
@@ -79,11 +86,16 @@ Respond naturally based on intent:
 - unknown → politely ask for clarification
 `;
 
-  try {
-    const result = await model.generateContent(prompt);
-    return result.response.text().trim();
-  } catch (err: any) {
-    console.error('[aiService] generateReply error:', err.message);
-    return `⚠️ AI Error: ${err.message}. (Check if your GEMINI_API_KEY is leaked or restricted)`;
+  for (const modelName of modelsToTry) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    } catch (err: any) {
+      console.warn(`[aiService] ${modelName} failed in generateReply:`, err.message);
+      lastError = err;
+    }
   }
+
+  return `⚠️ AI Error: All models failed. Last error: ${lastError?.message}`;
 }

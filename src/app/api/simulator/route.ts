@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    const { reply, products } = await processMessage({
+    const result = await processMessage({
       businessId: business.id,
       businessName: 'Aarya Bathware',
       phone: phone || 'SIMULATOR',
@@ -33,6 +33,12 @@ export async function POST(req: NextRequest) {
       whatsappMsgId: 'wa_' + Date.now(),
       isSimulation: true
     });
+
+    if (!result) {
+      return NextResponse.json({ error: 'AI Brain returned no response' }, { status: 500 });
+    }
+
+    const { reply, products } = result;
 
     return NextResponse.json({ 
       reply, 

@@ -15,8 +15,8 @@ export async function detectLanguageAndIntent(messageText: string) {
     'models/gemini-2.5-pro',
     'models/gemini-2.5-flash',
     'models/gemini-2.0-flash',
-    'gemini-1.5-pro-latest',
-    'gemini-1.5-flash-latest'
+    'models/gemini-flash-latest',
+    'models/gemini-pro-latest'
   ];
 
   const prompt = `
@@ -43,7 +43,7 @@ Rules:
   // Try Gemini models first
   for (const modelName of geminiModels) {
     try {
-      const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: 'v1' });
+      const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim();
       const clean = text.replace(/```json|```/g, '').trim();
@@ -78,8 +78,8 @@ export async function generateReply({ userMessage, language, intent, businessNam
     'models/gemini-2.5-pro',
     'models/gemini-2.5-flash',
     'models/gemini-2.0-flash',
-    'gemini-1.5-pro-latest',
-    'gemini-1.5-flash-latest'
+    'models/gemini-flash-latest',
+    'models/gemini-pro-latest'
   ];
 
   const productList = products && products.length
@@ -125,7 +125,7 @@ Respond naturally based on intent:
   let lastGeminiError = '';
   for (const modelName of geminiModels) {
     try {
-      const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: 'v1' });
+      const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       return result.response.text().trim();
     } catch (err: any) {

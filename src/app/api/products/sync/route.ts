@@ -108,27 +108,40 @@ export async function POST(req: NextRequest) {
     let updated = 0;
     const now = new Date().toISOString();
 
-    // 4. Actual Commit to Database
-    for (const productData of processedProducts) {
-      const existing = await db.collection('products')
-        .where('business_id', '==', business.id)
-        .where('name', '==', productData.name)
-        .limit(1)
-        .get();
+    let created = 0;
+    let updated = 0;
+    const now = new Date().toISOString();
 
+    // 4. Optimized Commit to Database (Bulk)
+    // Fetch all existing product names for this business once to avoid N queries
+    const existingSnap = await db.collection('products')
+      .where('business_id', '==', business.id)
+      .get();
+    
+    const existingMap = new Map();
+    existingSnap.docs.forEach(doc => {
+      existingMap.set(doc.data().name, doc);
+    });
+
+    // Process in smaller batches of parallel promises to avoid overloading
+    const commitPromises = processedProducts.map(async (productData) => {
       const finalData = { ...productData, is_active: 1, updated_at: now };
+      const existingDoc = existingMap.get(productData.name);
 
-      if (!existing.empty) {
-        await existing.docs[0].ref.update(finalData);
+      if (existingDoc) {
         updated++;
+        return existingDoc.ref.update(finalData);
       } else {
-        await db.collection('products').add({
+        created++;
+        return db.collection('products').add({
           ...finalData,
           created_at: now
         });
-        created++;
       }
-    }
+    });
+
+    // Execute all operations in parallel
+    await Promise.all(commitPromises);
 
     // 5. Update Categorization Awareness
     if (externalCategories.length > 0) {

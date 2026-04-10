@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
           customer_id: doc.id,
           customer_name: c.name, // Correct field
           customer_phone: c.phone, // Correct field
-          is_handover: messages.some(m => m.intent === 'handover'),
+          is_handover: messages.some((m: any) => m.intent === 'handover'),
           messages: messages
         });
       }

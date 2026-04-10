@@ -214,9 +214,9 @@ export default function SettingsPage() {
                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Meta Verification Secret</p>
                 <div className="flex gap-3">
                    <div className="flex-1 bg-white rounded-2xl px-6 py-3.5 text-xs text-blue-600 font-black border border-slate-200 truncate shadow-sm">
-                      {business.verify_token || 'aibotbrain_secure_link'}
+                      {(business as any).verify_token || 'aibotbrain_secure_link'}
                    </div>
-                   <button onClick={() => copyToClipboard(business.verify_token || 'aibotbrain_secure_link', 'vtoken')} className="p-3.5 rounded-2xl bg-white text-slate-400 hover:text-blue-600 border border-slate-200 shadow-sm transition-all active:scale-95">
+                   <button onClick={() => copyToClipboard((business as any).verify_token || 'aibotbrain_secure_link', 'vtoken')} className="p-3.5 rounded-2xl bg-white text-slate-400 hover:text-blue-600 border border-slate-200 shadow-sm transition-all active:scale-95">
                       {copied === 'vtoken' ? <Check size={20} /> : <Copy size={20} />}
                    </button>
                 </div>
@@ -336,7 +336,7 @@ export default function SettingsPage() {
                     {business.api_key}
                  </div>
                  <button 
-                    onClick={() => copyToClipboard(business.api_key, 'apikey')}
+                    onClick={() => copyToClipboard((business as any).api_key || '', 'apikey')}
                     className="w-full sm:w-auto py-5 px-16 bg-slate-900 hover:bg-black text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-slate-500/20 transition-all flex items-center justify-center gap-4 active:scale-95 group/btn"
                  >
                     {copied === 'apikey' ? 'ID COPIED TO BRAIN' : (

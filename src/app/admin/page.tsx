@@ -136,7 +136,7 @@ export default function AdminOverview() {
                        contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: '0 10px 20px rgba(0,0,0,0.05)' }}
                        itemStyle={{ color: '#dc2626', fontWeight: '900', fontSize: '10px', textTransform: 'uppercase' }}
                     />
-                    <Area type="monotone" dataKey="usage" stroke="#dc2626" strokeWidth={5} fill="url(#adminGrad)" dot={{ r: 8, fill: '#dc2626', strokeWidth: 4, stroke: '#FFFFFF' }} activeDot={{ r: 10, shadow: '0 0 20px #dc2626' }} />
+                    <Area type="monotone" dataKey="usage" stroke="#dc2626" strokeWidth={5} fill="url(#adminGrad)" dot={{ r: 8, fill: '#dc2626', strokeWidth: 4, stroke: '#FFFFFF' }} activeDot={{ r: 10 }} />
                  </AreaChart>
               </ResponsiveContainer>
            </div>

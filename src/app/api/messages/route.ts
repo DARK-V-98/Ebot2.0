@@ -37,8 +37,8 @@ export async function GET(req: NextRequest) {
 
     // Sort conversations by latest message time
     conversations.sort((a, b) => {
-      const aLast = new Date(a.messages[a.messages.length - 1].created_at).getTime();
-      const bLast = new Date(b.messages[b.messages.length - 1].created_at).getTime();
+      const aLast = new Date((a.messages[a.messages.length - 1] as any).created_at).getTime();
+      const bLast = new Date((b.messages[b.messages.length - 1] as any).created_at).getTime();
       return bLast - aLast;
     });
 

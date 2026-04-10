@@ -5,7 +5,7 @@ import OpenAI from 'openai';
 const cleanKey = (key: string) => (key || '').replace(/['"]+/g, '').trim();
 
 // Force v1 Stable API for paid/high-tier accounts
-const genAI = new GoogleGenerativeAI(cleanKey(process.env.GEMINI_API_KEY || ''), { apiVersion: 'v1' });
+const genAI = new GoogleGenerativeAI(cleanKey(process.env.GEMINI_API_KEY || ''));
 const openai = new OpenAI({ apiKey: cleanKey(process.env.OPENAI_API_KEY || '') });
 
 export async function detectLanguageAndIntent(messageText: string) {
@@ -40,7 +40,7 @@ Rules:
   // Try Gemini models first
   for (const modelName of geminiModels) {
     try {
-      const model = genAI.getGenerativeModel({ model: modelName });
+      const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: 'v1' });
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim();
       const clean = text.replace(/```json|```/g, '').trim();
@@ -119,7 +119,7 @@ Respond naturally based on intent:
   let lastGeminiError = '';
   for (const modelName of geminiModels) {
     try {
-      const model = genAI.getGenerativeModel({ model: modelName });
+      const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: 'v1' });
       const result = await model.generateContent(prompt);
       return result.response.text().trim();
     } catch (err: any) {

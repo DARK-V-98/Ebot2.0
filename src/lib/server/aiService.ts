@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function detectLanguageAndIntent(messageText: string) {
-  const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+  const modelsToTry = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro'];
   let lastError = null;
 
   for (const modelName of modelsToTry) {
@@ -44,7 +44,7 @@ Rules:
 }
 
 export async function generateReply({ userMessage, language, intent, businessName, products, sessionContext, history }: any) {
-  const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+  const modelsToTry = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro'];
   let lastError = null;
 
   const productList = products && products.length

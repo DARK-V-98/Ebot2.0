@@ -164,7 +164,23 @@ export async function processMessage({ businessId, businessName, phone, contactN
   });
 
   if (!isSimulation) {
-    await whatsappService.sendMessage(businessId, phone, reply);
+    if (products.length > 0 && intent === 'search_product') {
+      const rows = products.slice(0, 10).map((p: any) => ({
+        id: `prod_${p.id}`,
+        title: p.name.substring(0, 24),
+        description: `Rs.${p.price} | ${p.category || ''}`.substring(0, 72)
+      }));
+
+      await whatsappService.sendListMessage(
+        businessId, 
+        phone, 
+        reply,
+        'Select Product', 
+        [{ title: 'Available Items', rows }]
+      );
+    } else {
+      await whatsappService.sendMessage(businessId, phone, reply);
+    }
   }
 
   return reply;

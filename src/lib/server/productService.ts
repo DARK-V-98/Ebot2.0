@@ -71,12 +71,18 @@ export async function searchProducts(businessId: string, keywords: string[] = []
     products = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
   }
 
-  // 3. Search logic (Keyword filtering)
+  // 3. Search logic (Keyword filtering + Stock check)
   if (keywords.length) {
     products = products.filter((p: any) => {
+      // Only show items with stock > 0
+      if (p.stock <= 0) return false;
+      
       const text = `${p.name} ${p.tags || ''} ${p.category || ''} ${p.description || ''}`.toLowerCase();
       return keywords.some(k => text.includes(k.toLowerCase()));
     });
+  } else {
+    // Even if no keywords, filter by stock
+    products = products.filter((p: any) => p.stock > 0);
   }
   
   return products.slice(0, limit);

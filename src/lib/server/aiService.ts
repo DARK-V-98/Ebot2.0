@@ -1,24 +1,21 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
-// Auto-scrub the key to remove accidental spaces or newlines that break the API
-const rawKey = process.env.GEMINI_API_KEY || '';
-const cleanKey = rawKey.replace(/['"]+/g, '').trim();
+// Auto-scrub keys to remove accidental spaces or newlines
+const cleanKey = (key: string) => (key || '').replace(/['"]+/g, '').trim();
 
-const genAI = new GoogleGenerativeAI(cleanKey);
+const genAI = new GoogleGenerativeAI(cleanKey(process.env.GEMINI_API_KEY || ''));
+const openai = new OpenAI({ apiKey: cleanKey(process.env.OPENAI_API_KEY || '') });
 
 export async function detectLanguageAndIntent(messageText: string) {
-  const modelsToTry = [
+  const geminiModels = [
     'gemini-1.5-pro-latest',
     'gemini-1.5-flash-latest',
     'gemini-2.0-flash-exp',
     'gemini-pro'
   ];
-  let lastError = null;
 
-  for (const modelName of modelsToTry) {
-    try {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const prompt = `
+  const prompt = `
 You are a language and intent classifier for a WhatsApp commerce bot.
 Analyze the following message and respond ONLY with valid JSON (no markdown, no extra text).
 
@@ -38,28 +35,45 @@ Rules:
 - "english" = standard English
 - Detect intent from context: product mentions = search_product, buy/order/ganna = place_order
 `;
+
+  // Try Gemini models first
+  for (const modelName of geminiModels) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim();
       const clean = text.replace(/```json|```/g, '').trim();
       return JSON.parse(clean);
     } catch (err: any) {
-      console.warn(`[aiService] ${modelName} failed:`, err.message);
-      lastError = err;
+      console.warn(`[aiService] Gemini ${modelName} failed:`, err.message);
     }
   }
 
-  console.error('[aiService] All models failed in detectLanguageAndIntent');
+  // Final fallback to OpenAI gpt-4o-mini (fast & cheap)
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" }
+      });
+      return JSON.parse(completion.choices[0].message.content || '{}');
+    } catch (err: any) {
+      console.error('[aiService] OpenAI fallback failed:', err.message);
+    }
+  }
+
+  console.error('[aiService] All models (Gemini + OpenAI) failed in detectLanguageAndIntent');
   return { language: 'unknown', intent: 'unknown', extracted_keywords: [], confidence: 0 };
 }
 
 export async function generateReply({ userMessage, language, intent, businessName, products, sessionContext, history }: any) {
-  const modelsToTry = [
+  const geminiModels = [
     'gemini-1.5-pro-latest',
     'gemini-1.5-flash-latest',
     'gemini-2.0-flash-exp',
     'gemini-pro'
   ];
-  let lastError = null;
 
   const productList = products && products.length
     ? products.map((p: any) => `- ${p.name}: Rs.${p.price} (${p.category || 'General'})`).join('\n')
@@ -100,16 +114,32 @@ Respond naturally based on intent:
 - unknown → politely ask for clarification
 `;
 
-  for (const modelName of modelsToTry) {
+  // Try Gemini models first
+  let lastGeminiError = '';
+  for (const modelName of geminiModels) {
     try {
       const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       return result.response.text().trim();
     } catch (err: any) {
-      console.warn(`[aiService] ${modelName} failed in generateReply:`, err.message);
-      lastError = err;
+      console.warn(`[aiService] Gemini ${modelName} failed in generateReply:`, err.message);
+      lastGeminiError = err.message;
     }
   }
 
-  return `⚠️ AI Error: All models failed. Last error: ${lastError?.message}`;
+  // Final fallback to OpenAI GPT-4o
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+      });
+      return completion.choices[0].message.content || '';
+    } catch (err: any) {
+      console.error('[aiService] OpenAI fallback failed:', err.message);
+      return `⚠️ AI Error: All systems failed. (Gemini: ${lastGeminiError}, OpenAI: ${err.message})`;
+    }
+  }
+
+  return `⚠️ AI Error: All Gemini models failed and no OpenAI key found. (Last Gemini error: ${lastGeminiError})`;
 }

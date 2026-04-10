@@ -8,13 +8,11 @@ const genAI = new GoogleGenerativeAI(cleanKey(process.env.GEMINI_API_KEY || ''))
 
 export async function detectLanguageAndIntent(messageText: string) {
   const geminiModels = [
-    'models/gemini-flash-latest',
-    'models/gemini-pro-latest',
     'models/gemini-1.5-flash',
     'models/gemini-1.5-pro',
     'models/gemini-2.0-flash',
-    'models/gemini-3.1-pro-preview',
-    'models/gemini-2.5-pro'
+    'models/gemini-flash-latest',
+    'models/gemini-pro-latest'
   ];
 
   const prompt = `
@@ -57,18 +55,28 @@ Rules:
 
 export async function generateReply({ userMessage, language, intent, businessName, products, sessionContext, history }: any) {
   const geminiModels = [
-    'models/gemini-flash-latest',
-    'models/gemini-pro-latest',
     'models/gemini-1.5-flash',
     'models/gemini-1.5-pro',
     'models/gemini-2.0-flash',
-    'models/gemini-3.1-pro-preview',
-    'models/gemini-2.5-pro'
+    'models/gemini-flash-latest',
+    'models/gemini-pro-latest'
   ];
 
-  const productList = products && products.length
-    ? products.map((p: any) => `- ${p.name}: Rs.${p.price} (${p.category || 'General'})`).join('\n')
-    : 'No products found.';
+  // SMART FILTERING: Only show full details for relevant products (max 10)
+  // Otherwise, just show a summary of categories to save tokens
+  let productContextText = 'No products found.';
+  
+  if (products && products.length > 0) {
+    const topProducts = products.slice(0, 10);
+    productContextText = topProducts.map((p: any) => `- ${p.name}: Rs.${p.price} (${p.category || 'General'})`).join('\n');
+    
+    if (products.length > 10) {
+      productContextText += `\n...and ${products.length - 10} more items in stock.`;
+    }
+  } else {
+    // If no specific products are found, provide a list of categories as a guide
+    productContextText = "We have items in various categories. Please ask for a specific item to see details.";
+  }
 
   const historyText = history && history.length
     ? history.slice(-6).map((m: any) => `${m.direction === 'in' ? 'Customer' : 'Bot'}: ${m.message}`).join('\n')
@@ -90,14 +98,14 @@ Session state: ${sessionContext?.state || 'idle'}
 Recent conversation:
 ${historyText}
 
-Available products:
-${productList}
+Relevant products (Current Selection):
+${productContextText}
 
 Customer's message: "${userMessage}"
 
 Respond naturally based on intent:
-- greeting → welcome warmly, ask how you can help
-- search_product → show relevant products from the list above
+- greeting → welcome warmly, ask how you can help.
+- search_product → if products are listed above, show them. Otherwise, ask what they are looking for.
 - place_order → guide them through ordering (ask for address if not provided)
 - check_order → ask for order ID or confirmation
 - help → explain what the bot can do

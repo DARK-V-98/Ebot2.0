@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
   if (!business) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { message } = await req.json();
+    const body = await req.json();
+    const { message, phone, name } = body;
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -26,10 +27,10 @@ export async function POST(req: NextRequest) {
     const reply = await processMessage({
       businessId: business.id,
       businessName: business.name || 'Your Business',
-      phone: 'SIMULATOR',
-      contactName: 'Admin Simulator',
+      phone: phone || 'SIMULATOR',
+      contactName: name || 'Admin Simulator',
       messageText: message,
-      whatsappMsgId: 'sim_' + Date.now(),
+      whatsappMsgId: 'wa_' + Date.now(),
       isSimulation: true
     });
 

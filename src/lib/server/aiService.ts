@@ -23,8 +23,8 @@ Message: "${messageText.replace(/"/g, "'")}"
 
 Return JSON in this exact format:
 {
-  "language": "english" | "sinhala" | "singlish",
-  "intent": "greeting" | "search_product" | "place_order" | "check_order" | "help" | "cancel" | "unknown",
+  "language": "english" | "sinhala" | "singlish" | "tamil",
+  "intent": "greeting" | "search_product" | "place_order" | "check_order" | "location" | "help" | "cancel" | "unknown",
   "extracted_keywords": ["keyword1", "keyword2"],
   "confidence": 0.0-1.0
 }
@@ -32,8 +32,9 @@ Return JSON in this exact format:
 Rules:
 - "sinhala" = pure Sinhala script (Unicode)
 - "singlish" = Sinhala written in English letters (e.g., "mama eka ganna one")
+- "tamil" = pure Tamil script (Unicode)
 - "english" = standard English
-- Detect intent from context: product mentions = search_product, buy/order/ganna = place_order
+- Detect intent from context: product mentions = search_product, address/location/map = location, buy/order/ganna = place_order
 `;
 
   // Try Gemini models first
@@ -87,12 +88,16 @@ You are a friendly WhatsApp shopping assistant for "${businessName}".
 Reply in the SAME language as the customer's message: ${language}.
 - If language is "sinhala": reply in Sinhala Unicode script.
 - If language is "singlish": reply in Singlish (Sinhala words in English letters).
+- If language is "tamil": reply in Tamil Unicode script.
 - If language is "english": reply in clear English.
 
-Keep replies SHORT (max 3-4 sentences), warm, and action-oriented.
-Use emojis naturally. Do NOT use markdown formatting.
 IMPORTANT: You are the assistant for the business. Never mention your own name or the owner's name. 
 Do NOT address the customer by their personal name (e.g., don't say "Hi Vishwa"). Always stay professional and represent the brand "${businessName}".
+
+ADDRESS & LOCATION (Golden Rule):
+If the customer asks for the location, address, or where the shop is (in any language), you MUST provide this exactly:
+Aarya Bathware, 80 Polgasowita Rd, Kottawa. 
+Map Link: https://maps.app.goo.gl/cckESsCgnYfe5jf77
 
 Detected intent: ${intent}
 Session state: ${sessionContext?.state || 'idle'}
@@ -108,11 +113,12 @@ Customer's message: "${userMessage}"
 Respond naturally based on intent:
 - greeting → welcome warmly, ask how you can help.
 - search_product → if products are listed above, show them. Otherwise, ask what they are looking for.
+- location → provide the Aarya Bathware address and map link.
 - place_order → guide them through ordering (ask for address if not provided)
 - check_order → ask for order ID or confirmation
-- help → explain what the bot can do
+- help → explain what the bot can do (mentioning you can provide location and products)
 - cancel → acknowledge and reset
-- unknown → politely ask for clarification
+- unknown → politely ask for clarification. If they asked for address, give it.
 `;
 
   // Try Gemini models first

@@ -23,13 +23,20 @@ export async function GET(req: NextRequest) {
         // .orderBy('created_at', 'asc') // Omit orderby to prevent index requirement if not ready
         .get();
         
-      const messages = msgsSnap.docs.map(m => ({ id: m.id, ...m.data() })).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      const messages = msgsSnap.docs.map(m => {
+        const d = m.data();
+        return { 
+          id: m.id, 
+          ...d, 
+          content: d.message // Match frontend expectation
+        };
+      }).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
       if (messages.length > 0) {
         conversations.push({
           customer_id: doc.id,
-          customer_name: c.profile_name,
-          customer_phone: c.phone_number,
+          customer_name: c.name, // Correct field
+          customer_phone: c.phone, // Correct field
           messages: messages
         });
       }

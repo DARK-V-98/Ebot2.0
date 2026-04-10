@@ -1,6 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { getConversations } from '@/lib/api';
+import { getConversations, resetAISession, deleteConversation } from '@/lib/api';
 import { MessageSquare, Search, Phone, Calendar, Hash, ArrowLeft, Bot, User, ShieldCheck } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import clsx from 'clsx';

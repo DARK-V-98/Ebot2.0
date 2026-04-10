@@ -4,7 +4,8 @@ import OpenAI from 'openai';
 // Auto-scrub keys to remove accidental spaces or newlines
 const cleanKey = (key: string) => (key || '').replace(/['"]+/g, '').trim();
 
-const genAI = new GoogleGenerativeAI(cleanKey(process.env.GEMINI_API_KEY || ''));
+// Force v1 Stable API for paid/high-tier accounts
+const genAI = new GoogleGenerativeAI(cleanKey(process.env.GEMINI_API_KEY || ''), { apiVersion: 'v1' });
 const openai = new OpenAI({ apiKey: cleanKey(process.env.OPENAI_API_KEY || '') });
 
 export async function detectLanguageAndIntent(messageText: string) {

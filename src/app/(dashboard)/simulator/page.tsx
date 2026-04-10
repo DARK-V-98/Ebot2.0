@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Send, Bot, User, RefreshCcw } from 'lucide-react';
-import axios from 'axios';
+import api from '@/lib/api';
 import { toast } from 'react-hot-toast';
 
 export default function SimulatorPage() {
@@ -42,7 +42,7 @@ export default function SimulatorPage() {
 
     setLoading(true);
     try {
-      const res = await axios.post('/api/simulator', { message: userMessage });
+      const res = await api.post('/api/simulator', { message: userMessage });
       setMessages(prev => [...prev, {
         id: Date.now().toString() + 'b',
         role: 'bot',

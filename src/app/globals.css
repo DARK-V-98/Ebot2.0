@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary:   #FFFFFF;
+    --bg-secondary: #F8FAFC;
+    --bg-card:      #FFFFFF;
+    --bg-hover:     #F1F5F9;
+    --text-primary: #000000;
+    --text-muted:   #334155;
+    --border:       #E2E8F0;
+    
+    --brand-red:    #E11D48;
+    --brand-blue:   #2563EB;
+    /* High contrast primary brand */
+    --brand:        #2563EB; 
+    --brand-dim:    rgba(37,99,235,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track  { background: #F1F5F9; }
+  ::-webkit-scrollbar-thumb  { background: #CBD5E1; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+}
+
+@layer utilities {
+  .shadow-premium {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1), 0 10px 15px -3px rgb(0 0 0 / 0.05);
+  }
+  .shadow-glow-blue {
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.15), 0 0 40px rgba(37, 99, 235, 0.05);
+  }
+  .shadow-glow-red {
+    box-shadow: 0 0 20px rgba(225, 29, 72, 0.15), 0 0 40px rgba(225, 29, 72, 0.05);
+  }
+}
+
+@layer components {
+
+  /* ── Premium Card ─────────────────────────────────────────────── */
+  .card {
+    @apply rounded-3xl border bg-white border-slate-200 shadow-sm transition-all duration-300;
+  }
+
+  .card-glow {
+    @apply card hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1;
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm
+           transition-all duration-300 cursor-pointer select-none ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-blue-600 text-white hover:bg-blue-700
+           shadow-lg shadow-blue-500/20 active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply btn bg-slate-100 text-slate-700 border border-slate-200
+           hover:bg-slate-200 active:scale-95;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700
+           shadow-lg shadow-red-500/20 active:scale-95;
+  }
+
+  .btn-accent {
+    @apply btn bg-red-600 text-white hover:bg-red-700
+           shadow-lg shadow-red-500/20 active:scale-95;
+  }
+
+  .btn-icon {
+    @apply btn p-3 rounded-2xl;
+  }
+
+  /* ── Form Inputs ─────────────────────────────────────────────── */
+  .input {
+    @apply w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200
+           text-slate-900 placeholder-slate-400 text-sm font-medium
+           focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/40
+           transition-all duration-300;
+  }
+
+  /* ── Badge ───────────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest;
+  }
+
+  .badge-blue { @apply badge bg-blue-50 text-blue-600 border border-blue-100; }
+  .badge-red { @apply badge bg-red-50 text-red-600 border border-red-100; }
+  .badge-green { @apply badge bg-emerald-50 text-emerald-600 border border-emerald-100; }
+
+  /* ── Navigation ──────────────────────────────────────────────── */
+  .nav-link {
+    @apply flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-500 font-bold 
+           transition-all duration-300 hover:bg-slate-50 hover:text-blue-600 relative overflow-hidden;
+  }
+
+  .nav-link-active {
+    @apply bg-blue-50 text-blue-600 relative overflow-hidden;
+  }
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}

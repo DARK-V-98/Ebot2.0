@@ -1,12 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import OpenAI from 'openai';
 
 // Auto-scrub keys to remove accidental spaces or newlines
 const cleanKey = (key: string) => (key || '').replace(/['"]+/g, '').trim();
 
 // Force v1 Stable API for paid/high-tier accounts
 const genAI = new GoogleGenerativeAI(cleanKey(process.env.GEMINI_API_KEY || ''));
-const openai = new OpenAI({ apiKey: cleanKey(process.env.OPENAI_API_KEY || '') });
 
 export async function detectLanguageAndIntent(messageText: string) {
   const geminiModels = [
@@ -53,21 +51,7 @@ Rules:
     }
   }
 
-  // Final fallback to OpenAI gpt-4o-mini (fast & cheap)
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" }
-      });
-      return JSON.parse(completion.choices[0].message.content || '{}');
-    } catch (err: any) {
-      console.error('[aiService] OpenAI fallback failed:', err.message);
-    }
-  }
-
-  console.error('[aiService] All models (Gemini + OpenAI) failed in detectLanguageAndIntent');
+  console.error('[aiService] All Gemini models failed in detectLanguageAndIntent');
   return { language: 'unknown', intent: 'unknown', extracted_keywords: [], confidence: 0 };
 }
 
@@ -134,19 +118,5 @@ Respond naturally based on intent:
     }
   }
 
-  // Final fallback to OpenAI GPT-4o
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-      });
-      return completion.choices[0].message.content || '';
-    } catch (err: any) {
-      console.error('[aiService] OpenAI fallback failed:', err.message);
-      return `⚠️ AI Error: All systems failed. (Gemini: ${lastGeminiError}, OpenAI: ${err.message})`;
-    }
-  }
-
-  return `⚠️ AI Error: All Gemini models failed and no OpenAI key found. (Last Gemini error: ${lastGeminiError})`;
+  return `⚠️ AI Error: All Gemini models failed. (Last Gemini error: ${lastGeminiError})`;
 }

@@ -1,12 +1,11 @@
 import { db } from '../firebase/firebaseAdmin';
+import { getProduct } from './productService';
 
 export async function createOrder({ businessId, customerId, productId, quantity = 1, address = null, notes = null }: any) {
-  const productDoc = await db.collection('products').doc(productId).get();
-  if (!productDoc.exists) throw new Error('Product not found');
-  const product = productDoc.data();
-  if (product?.business_id !== businessId) throw new Error('Invalid product');
+  const product = await getProduct(businessId, productId);
+  if (!product) throw new Error('Product not found');
 
-  const totalPrice = parseFloat(product?.price || 0) * quantity;
+  const totalPrice = parseFloat(product.price || 0) * quantity;
   const now = new Date().toISOString();
 
   const docRef = await db.collection('orders').add({
@@ -31,13 +30,13 @@ export async function getOrder(businessId: string, orderId: string) {
   const order = doc.data() as any;
   if (order.business_id !== businessId) return null;
 
-  const [cDoc, pDoc] = await Promise.all([
+  const [cDoc, product] = await Promise.all([
     db.collection('customers').doc(order.customer_id).get(),
-    db.collection('products').doc(order.product_id).get()
+    getProduct(businessId, order.product_id)
   ]);
 
   const customer = cDoc.data() || {};
-  const product = pDoc.data() || {};
+  const p = product || {};
 
   return {
     id: doc.id,
@@ -45,10 +44,10 @@ export async function getOrder(businessId: string, orderId: string) {
     customer_phone: customer.phone,
     customer_name: customer.name,
     customer_language: customer.language,
-    product_name: product.name,
-    product_price: product.price,
-    product_image: product.image_url,
-    product_category: product.category,
+    product_name: p.name || 'Unknown Product',
+    product_price: p.price || 0,
+    product_image: p.image_url || null,
+    product_category: p.category || 'General',
   };
 }
 

@@ -115,11 +115,27 @@ export async function listProducts(businessId: string, { page = 1, limit = 1000,
 }
 
 export async function getProduct(businessId: string, productId: string) {
+  // 1. Check real-time external API cache first to get latest stock/price
+  const cacheKey = `${businessId}_external`;
+  let cached = externalCache.get(cacheKey);
+  
+  // If cache is missing or expired, fetch from external API via searchProducts
+  if (!cached || (Date.now() - cached.timestamp >= CACHE_TTL)) {
+    await searchProducts(businessId, [], 1000);
+    cached = externalCache.get(cacheKey);
+  }
+
+  if (cached) {
+    const extP = cached.data.find((p: any) => String(p.id) === String(productId) || p.name === productId);
+    if (extP) return { ...extP, __source: 'external' };
+  }
+
+  // 2. Fallback to local database if not found externally
   const doc = await db.collection('products').doc(productId).get();
   if (!doc.exists) return null;
   const data = doc.data();
   if (data?.business_id !== businessId) return null;
-  return { id: doc.id, ...data };
+  return { id: doc.id, ...data, __source: 'local' };
 }
 
 export async function createProduct(businessId: string, data: any) {

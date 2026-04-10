@@ -388,7 +388,7 @@ export default function SettingsPage() {
                     <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-black text-slate-400">2</div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-2">Create a Business App</h3>
                     <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                       Click "Create App" &rarr; Select "Other" &rarr; Select "Business" as the type. Give your app a name and associate it with a Business Portfolio.
+                       Click &ldquo;Create App&rdquo; &rarr; Select &ldquo;Other&rdquo; &rarr; Select &ldquo;Business&rdquo; as the type. Give your app a name and associate it with a Business Portfolio.
                     </p>
                  </div>
 
@@ -397,10 +397,10 @@ export default function SettingsPage() {
                     <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-black text-slate-400">3</div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-2">Configure WhatsApp Product</h3>
                     <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                       Inside your app dashboard, find "WhatsApp" and click "Set up". Connect your official business phone number in the "Getting Started" section.
+                       Inside your app dashboard, find &ldquo;WhatsApp&rdquo; and click &ldquo;Set up&rdquo;. Connect your official business phone number in the &ldquo;Getting Started&rdquo; section.
                     </p>
                     <div className="mt-4 p-4 bg-amber-50 rounded-2xl border border-amber-100 italic text-[11px] text-amber-700 font-medium">
-                       "Copy the <strong>Phone Number ID</strong> from here and paste it into our Settings page."
+                       &ldquo;Copy the <strong>Phone Number ID</strong> from here and paste it into our Settings page.&rdquo;
                     </div>
                  </div>
 
@@ -409,7 +409,7 @@ export default function SettingsPage() {
                     <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-black text-slate-400">4</div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-2">Setup Webhook & Verification</h3>
                     <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                       Go to WhatsApp &rarr; Configuration. Click "Edit" on Webhook.
+                       Go to WhatsApp &rarr; Configuration. Click &ldquo;Edit&rdquo; on Webhook.
                     </p>
                     <ul className="mt-3 space-y-2">
                        <li className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
@@ -422,7 +422,7 @@ export default function SettingsPage() {
                        </li>
                     </ul>
                     <p className="text-[10px] text-slate-400 mt-4 leading-relaxed bg-slate-50 p-4 rounded-xl">
-                      IMPORTANT: After saving, click "Manage" next to Webhook Fields and <strong>subscribe to 'messages'</strong> event.
+                      IMPORTANT: After saving, click &ldquo;Manage&rdquo; next to Webhook Fields and <strong>subscribe to &apos;messages&apos;</strong> event.
                     </p>
                  </div>
 
@@ -431,10 +431,10 @@ export default function SettingsPage() {
                     <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-black text-white shadow-blue-500/20 shadow-lg">5</div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-2">Generate System User Token</h3>
                     <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                       Do not use a temporary token! Go to Business Settings &rarr; Users &rarr; System Users. Add a user, and click "Generate Token".
+                       Do not use a temporary token! Go to Business Settings &rarr; Users &rarr; System Users. Add a user, and click &ldquo;Generate Token&rdquo;.
                     </p>
                     <div className="mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-[11px] text-emerald-700 font-bold">
-                       Select 'whatsapp_business_messaging' permission. Copy that token and paste it into the <strong>Meta Access Token</strong> field.
+                       Select &apos;whatsapp_business_messaging&apos; permission. Copy that token and paste it into the <strong>Meta Access Token</strong> field.
                     </div>
                  </div>
               </div>

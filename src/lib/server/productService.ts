@@ -1,26 +1,100 @@
 import { db } from '../firebase/firebaseAdmin';
 import axios from 'axios';
+import mysql from 'mysql2/promise';
+import * as admin from 'firebase-admin';
 
 // Simple in-memory cache for external products (5 minutes)
 const externalCache = new Map<string, { data: any[], timestamp: number }>();
+const extFbApps = new Map<string, admin.app.App>();
 const CACHE_TTL = 5 * 60 * 1000; 
 
+async function fetchFromExtFB(config: any) {
+  if (!config.ext_fb_project_id || !config.ext_fb_client_email || !config.ext_fb_private_key) return [];
+  
+  try {
+    const appName = `ext_${config.ext_fb_project_id}`;
+    let extApp = extFbApps.get(appName);
+    
+    if (!extApp) {
+      extApp = admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: config.ext_fb_project_id,
+          clientEmail: config.ext_fb_client_email,
+          privateKey: config.ext_fb_private_key.replace(/\\n/g, '\n'),
+        })
+      }, appName);
+      extFbApps.set(appName, extApp);
+    }
+
+    const extDb = extApp.firestore();
+    const snapshot = await extDb.collection(config.ext_fb_collection || 'products').get();
+    
+    return snapshot.docs.map((doc: any) => {
+      const p = doc.data();
+      return {
+        id: doc.id,
+        name: p.name || p.title || '',
+        price: p.price || 0,
+        description: p.description || '',
+        category: p.category || 'General',
+        stock: p.stock || 0,
+        image_url: p.image_url || null
+      };
+    });
+  } catch (err: any) {
+    console.error(`[productService] External Firebase Link Failed: ${err.message}`);
+    return [];
+  }
+}
+
+async function fetchFromSQL(config: any) {
+  if (!config.db_host || !config.db_user || !config.db_name) return [];
+  
+  let connection;
+  try {
+    connection = await mysql.createConnection({
+      host: config.db_host,
+      user: config.db_user,
+      password: config.db_pass,
+      database: config.db_name,
+      connectTimeout: 10000
+    });
+
+    const [rows]: any = await connection.execute(config.db_query || 'SELECT * FROM products');
+    
+    // Normalize SQL rows to standard product format
+    return rows.map((p: any) => ({
+      id: String(p.id || p.product_id || p.sku),
+      name: p.name || p.title || p.product_name,
+      price: p.price || p.unit_price || 0,
+      description: p.description || p.short_description || '',
+      category: p.category || p.category_name || 'General',
+      stock: p.stock || p.quantity || 0,
+      image_url: p.image_url || p.thumbnail || null
+    }));
+  } catch (err: any) {
+    console.error(`[productService] SQL connection failed: ${err.message}`);
+    return [];
+  } finally {
+    if (connection) await connection.end();
+  }
+}
 export async function searchProducts(businessId: string, keywords: string[] = [], limit = 5) {
   let products: any[] = [];
   
-  // 1. Try to fetch from external API if configured
-  try {
-    const bizDoc = await db.collection('businesses').doc(businessId).get();
-    const config = bizDoc.data();
-    
-    if (config?.external_inventory_url) {
+  const bizDoc = await db.collection('businesses').doc(businessId).get();
+  const config = bizDoc.data();
+  const priority = config?.inventory_priority || 'hybrid';
+
+  // 1. Try to fetch from external API if configured AND priority allowed
+  if (config?.external_inventory_url && (priority === 'api' || priority === 'hybrid')) {
+    try {
       const cacheKey = `${businessId}_external`;
       const cached = externalCache.get(cacheKey);
       const now = Date.now();
 
       if (cached && (now - cached.timestamp < CACHE_TTL)) {
         products = cached.data;
-        console.log(`[productService] Using cached external products for ${businessId}`);
       } else {
         const headers: any = {};
         if (config.external_inventory_key) {
@@ -28,47 +102,70 @@ export async function searchProducts(businessId: string, keywords: string[] = []
           headers[config.external_inventory_header || 'x-api-key'] = config.external_inventory_key;
         }
 
-        // Use the high-count URL logic
-        let url = config.external_inventory_url;
-        const separator = url.includes('?') ? '&' : '?';
-        const finalUrl = `${url}${url.includes('per_page') ? '' : `${separator}per_page=1000&limit=1000`}`;
-
-        const res = await axios.get(finalUrl, { headers, timeout: 20000 });
+        const res = await axios.get(config.external_inventory_url, { headers, timeout: 20000 });
         const resData = res.data;
-        products = Array.isArray(resData) ? resData : (resData.data || []);
+        let extProds = Array.isArray(resData) ? resData : (resData.data || []);
         
-        // Normalize fields
-        products = products.map((p: any) => ({
+        products = extProds.map((p: any) => ({
           id: p.id || p.name,
           name: p.name || p.title,
           price: p.discount_price || p.price,
-          description: p.description || p.name_sinhala || p.short_description || '',
+          description: p.description || p.short_description || '',
           category: p.category_name || p.category || 'General',
           stock: p.quantity || p.stock || 0,
           image_url: p.image_url || null
         }));
 
         externalCache.set(cacheKey, { data: products, timestamp: now });
-        console.log(`[productService] Fetched ${products.length} real-time products for ${businessId}`);
       }
-    }
-  } catch (err: any) {
-    console.error(`[productService] External search failed: ${err.message}. Checking stale cache...`);
-    const cached = externalCache.get(`${businessId}_external`);
-    if (cached) {
-      console.log(`[productService] Using stale cache for ${businessId} as fallback.`);
-      products = cached.data;
+    } catch (err: any) {
+      console.error(`[productService] External API failed: ${err.message}`);
     }
   }
 
-  // 2. Fallback to local products if external is empty or failed
-  if (products.length === 0) {
+  // 1.5 Try to fetch from Direct SQL if priority allowed
+  if (priority === 'sql' || priority === 'hybrid') {
+    const cacheKey = `${businessId}_sql`;
+    const cached = externalCache.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp < CACHE_TTL)) {
+      products = [...products, ...cached.data];
+    } else {
+      const sqlProds = await fetchFromSQL(config);
+      if (sqlProds.length > 0) {
+        products = [...products, ...sqlProds];
+        externalCache.set(cacheKey, { data: sqlProds, timestamp: now });
+      }
+    }
+  }
+
+  // 1.7 Try to fetch from External Firebase if priority allowed
+  if (priority === 'fb_ext' || priority === 'hybrid') {
+    const cacheKey = `${businessId}_fbext`;
+    const cached = externalCache.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp < CACHE_TTL)) {
+      products = [...products, ...cached.data];
+    } else {
+      const fbProds = await fetchFromExtFB(config);
+      if (fbProds.length > 0) {
+        products = [...products, ...fbProds];
+        externalCache.set(cacheKey, { data: fbProds, timestamp: now });
+      }
+    }
+  }
+
+  // 2. Fallback/Merge with local products
+  if (priority === 'local' || priority === 'hybrid' || ((priority === 'api' || priority === 'sql' || priority === 'fb_ext') && products.length === 0)) {
     const query = db.collection('products')
       .where('business_id', '==', businessId)
       .where('is_active', '==', 1);
 
     const snapshot = await query.get();
-    products = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    const localProds = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    products = [...products, ...localProds];
   }
 
   // 3. Search logic (Keyword filtering + Stock check)
@@ -90,29 +187,66 @@ export async function searchProducts(businessId: string, keywords: string[] = []
 
 export async function listProducts(businessId: string, { page = 1, limit = 1000, category = '', search = '' } = {}) {
   let products: any[] = [];
-
-  // 1. Get products from external cache (ensure it is populated)
-  const cacheKey = `${businessId}_external`;
-  let cached = externalCache.get(cacheKey);
   
-  if (!cached || (Date.now() - cached.timestamp >= CACHE_TTL)) {
-    // Re-trigger search to populate cache
-    await searchProducts(businessId, [], 1000);
-    cached = externalCache.get(cacheKey);
+  const bizDoc = await db.collection('businesses').doc(businessId).get();
+  const config = bizDoc.data();
+  const priority = config?.inventory_priority || 'hybrid';
+
+  // 1. Get products from external cache if applicable
+  if (priority === 'api' || priority === 'hybrid') {
+    const cacheKey = `${businessId}_external`;
+    let cached = externalCache.get(cacheKey);
+    
+    if (!cached || (Date.now() - cached.timestamp >= CACHE_TTL)) {
+      await searchProducts(businessId, [], 1000);
+      cached = externalCache.get(cacheKey);
+    }
+
+    if (cached && Array.isArray(cached.data)) {
+      products = [...products, ...cached.data];
+    }
   }
 
-  if (cached && Array.isArray(cached.data)) {
-    products = [...cached.data];
+  // 1.5 Get products from SQL cache if applicable
+  if (priority === 'sql' || priority === 'hybrid') {
+    const cacheKey = `${businessId}_sql`;
+    let cached = externalCache.get(cacheKey);
+    
+    if (!cached || (Date.now() - cached.timestamp >= CACHE_TTL)) {
+      await searchProducts(businessId, [], 1000);
+      cached = externalCache.get(cacheKey);
+    }
+
+    if (cached && Array.isArray(cached.data)) {
+      products = [...products, ...cached.data];
+    }
   }
 
-  // 2. Supplement with local Firestore products
-  const snapshot = await db.collection('products')
-    .where('business_id', '==', businessId)
-    .where('is_active', '==', 1)
-    .get();
-  
-  const localProducts = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-  products = [...products, ...localProducts];
+  // 1.7 Get products from External FB cache if applicable
+  if (priority === 'fb_ext' || priority === 'hybrid') {
+    const cacheKey = `${businessId}_fbext`;
+    let cached = externalCache.get(cacheKey);
+    
+    if (!cached || (Date.now() - cached.timestamp >= CACHE_TTL)) {
+      await searchProducts(businessId, [], 1000);
+      cached = externalCache.get(cacheKey);
+    }
+
+    if (cached && Array.isArray(cached.data)) {
+      products = [...products, ...cached.data];
+    }
+  }
+
+  // 2. Supplement with local Firestore products if applicable
+  if (priority === 'local' || priority === 'hybrid') {
+    const snapshot = await db.collection('products')
+      .where('business_id', '==', businessId)
+      .where('is_active', '==', 1)
+      .get();
+    
+    const localProducts = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    products = [...products, ...localProducts];
+  }
 
   // 3. Apply Filters (Category & Search)
   if (category) {
@@ -212,18 +346,19 @@ export async function deleteProduct(businessId: string, productId: string) {
 export async function getCategories(businessId: string) {
   const categories = new Set<string>();
 
-  // 1. Check external cache first (as it likely contains the most recent/relevant items)
-  let cached = externalCache.get(`${businessId}_external`);
-  if (!cached) {
-    // Attempt to trigger a search to populate the cache if it's empty
-    await searchProducts(businessId, [], 100);
-    cached = externalCache.get(`${businessId}_external`);
-  }
-
-  if (cached && Array.isArray(cached.data)) {
-    cached.data.forEach((p: any) => {
-      if (p.category) categories.add(p.category);
-    });
+  // 1. Check all external caches: External API, SQL, and Remote Firebase
+  const cacheKeys = [`${businessId}_external`, `${businessId}_sql`, `${businessId}_fbext`];
+  for (const key of cacheKeys) {
+    let cached = externalCache.get(key);
+    if (!cached) {
+      await searchProducts(businessId, [], 100);
+      cached = externalCache.get(key);
+    }
+    if (cached && Array.isArray(cached.data)) {
+      cached.data.forEach((p: any) => {
+        if (p.category) categories.add(p.category);
+      });
+    }
   }
 
   // 2. Get categories from local Firestore products

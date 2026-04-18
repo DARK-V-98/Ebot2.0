@@ -24,6 +24,7 @@
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.469.0",
+    "mysql2": "^3.22.1",
     "next": "^14.2.20",
     "node-fetch": "^3.3.2",
     "openai": "^6.34.0",

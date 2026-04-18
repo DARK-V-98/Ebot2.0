@@ -158,12 +158,23 @@ export async function processMessage({ businessId, businessName, phone, contactN
   let translation = '';
   let skipAI = false;
 
-  // Numbered Selection Intercept (e.g. typing "1" or "2" for a product/category)
+  // Numbered Selection Intercept (typing "1", "2" etc to select from buttons or products)
   const numCheck = /^\d+$/.test(textLower) ? parseInt(textLower) : null;
-  if (numCheck && numCheck > 0 && numCheck <= 30 && context.last_products?.length >= numCheck) {
-    messageText = `prod_${context.last_products[numCheck - 1]}`;
-    skipAI = true;
-    intent = 'select_product';
+  if (numCheck && numCheck > 0) {
+    if (context.last_buttons?.length >= numCheck) {
+      messageText = context.last_buttons[numCheck - 1];
+      skipAI = true;
+      // Map common button IDs to intents for faster processing
+      if (messageText === 'browse_products' || messageText === 'browse_more') intent = 'browse_menu';
+      else if (messageText === 'check_orders' || messageText === 'check_order') intent = 'check_order';
+      else if (messageText === 'get_location') intent = 'location';
+      else if (messageText === 'talk_to_human') intent = 'handover';
+    } 
+    else if (context.last_products?.length >= numCheck) {
+      messageText = `prod_${context.last_products[numCheck - 1]}`;
+      skipAI = true;
+      intent = 'select_product';
+    }
   }
   // Pattern Matching to aggressively bypass Expensive AI
   else if (greetings.includes(textLower)) {
@@ -495,6 +506,14 @@ export async function processMessage({ businessId, businessName, phone, contactN
       break;
   }
 
+  // Sync replyButtons to session context for numbered selection
+  if (replyButtons.length > 0) {
+     context.last_buttons = replyButtons.map(b => b.id);
+  } else if (interactiveType === 'none' && intent !== 'select_product') {
+     // Clear buttons if we're moving to a state without buttons, unless we just selected one
+     context.last_buttons = [];
+  }
+  
   await updateSession(customer.id, newState, context);
 
   if (skipAI) {
@@ -536,6 +555,22 @@ export async function processMessage({ businessId, businessName, phone, contactN
       sessionContext:  { state: newState, ...context },
       history:         history.slice(-4), // Context Shrinking: passing only last 4 messages instead of 10
     });
+  }
+
+  // --- APPEND NUMBERED MENU FOR WHATSAPP ---
+  // If not a simulation, we append the options as text so the user can type the number.
+  if (!isSimulation) {
+    if (replyButtons.length > 0) {
+      const menuText = replyButtons.map((b, i) => `${i + 1}️⃣ ${b.title}`).join('\n');
+      if (!reply.includes(menuText)) {
+        reply += `\n\n${menuText}`;
+      }
+    } else if (interactiveType === 'list' && products.length > 0) {
+      const itemsText = products.slice(0, 10).map((p, i) => `${i + 1}️⃣ ${p.name} - Rs.${p.price}`).join('\n');
+      if (!reply.includes(itemsText)) {
+        reply += `\n\n${itemsText}`;
+      }
+    }
   }
 
   await messageService.saveMessage({

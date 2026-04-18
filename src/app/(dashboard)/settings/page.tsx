@@ -348,6 +348,48 @@ export default function SettingsPage() {
               </div>
            </div>
         </div>
+
+        {/* Hard Reset Section */}
+        <div className="card p-1 bg-white border-red-100 shadow-2xl relative overflow-hidden group">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-red-100 transition-colors" />
+           <div className="p-10 relative z-10">
+              <div className="flex items-center gap-6 mb-10">
+                 <div className="w-16 h-16 rounded-3xl bg-red-600 flex items-center justify-center text-white shadow-xl shadow-red-500/20">
+                    <X size={32} strokeWidth={2.5} />
+                 </div>
+                 <div>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase mb-1">Developer Controls</h2>
+                    <p className="text-slate-500 text-xs font-black uppercase tracking-widest">System Hard Reset & Testing Tools</p>
+                 </div>
+              </div>
+
+              <div className="p-8 bg-red-50 border border-red-200 border-dashed rounded-[40px] flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden">
+                 <div className="text-left">
+                    <h3 className="text-lg font-black text-red-900 mb-2">Eradicate Database Entities</h3>
+                    <p className="text-xs text-red-700 font-bold max-w-sm">
+                       This will permanently delete all Customers, Messages, Notifications, and active Sessions from your Firebase. Good for wiping simulator tests.
+                    </p>
+                 </div>
+                 <button 
+                    onClick={async () => {
+                       if (confirm('⚠️ ARMAGEDDON PROTOCOL: Are you 100% sure you want to permanently delete all messages, customers, notifications, and active sessions in your Database? This action is irreversible.')) {
+                          try {
+                            const res = await fetch('/api/developer/clear-chats', { method: 'POST' });
+                            if (res.ok) toast.success('Database NUKED. Chats Cleared.');
+                            else toast.error('Failed to clear database.');
+                          } catch(e) {
+                            toast.error('Network error during reset.');
+                          }
+                       }
+                    }}
+                    className="flex-shrink-0 w-full md:w-auto py-5 px-10 bg-red-600 hover:bg-red-700 text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-red-500/30 transition-all flex items-center justify-center gap-3 active:scale-95"
+                 >
+                    <X size={16} /> Clear All Chats & Data
+                 </button>
+              </div>
+           </div>
+        </div>
+
       </div>
       {/* WhatsApp Connection Guide Modal */}
       <AnimatePresence>

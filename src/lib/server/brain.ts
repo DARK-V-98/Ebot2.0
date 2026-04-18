@@ -162,8 +162,9 @@ export async function processMessage({ businessId, businessName, phone, contactN
     intent = 'thanks';
     skipAI = true;
   } else if (menuList.includes(textLower)) {
-    intent = 'search_product'; // Maps to browse menu
+    intent = 'browse_menu'; 
     skipAI = true;
+    messageText = 'browse_products'; // Fake a button press to trigger the Category logic below
   } else if (locationList.includes(textLower)) {
     intent = 'location';
     skipAI = true;
@@ -260,9 +261,9 @@ export async function processMessage({ businessId, businessName, phone, contactN
           { id: 'buy_now', title: '🛒 Buy Now' },
           { id: 'browse_more', title: '🛍️ Browse More' }
         ];
-      } else if (products.length > 0) {
-        interactiveType = 'list';
       }
+      // If > 1 products, we deliberately leave interactiveType as 'none' 
+      // so the AI generates the rich text response showing Smart Links!
       break;
 
     case 'place_order': {
@@ -505,12 +506,12 @@ export async function processMessage({ businessId, businessName, phone, contactN
         `Anytime! Have a great day. 🌟`
       ];
       reply = thanksReplies[Math.floor(Math.random() * thanksReplies.length)];
-    } else if (intent === 'search_product') {
-      reply = `I'd be happy to show you what we have! Please explore our product menu below. 👇`;
     } else if (intent === 'location') {
       reply = `We'd love to see you! We are located at 80 Polgasowita Rd, Kottawa. Click the map link below for directions. 📍`;
     } else if (intent === 'handover') {
       reply = `No problem. I have notified our human agents. Someone will be with you shortly! 👨‍💼`;
+    } else if (intent === 'browse_menu') {
+      reply = `I'd be happy to show you what we have! Please explore our product menu below. 👇`;
     }
   } else {
     reply = await aiService.generateReply({

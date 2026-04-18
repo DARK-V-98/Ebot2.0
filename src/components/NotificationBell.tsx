@@ -223,7 +223,7 @@ export default function NotificationBell() {
                     <Bell size={28} className="text-slate-300" />
                   </div>
                   <p className="text-slate-400 text-sm font-bold">No notifications yet</p>
-                  <p className="text-slate-300 text-xs mt-1">You'll see alerts here when events occur</p>
+                  <p className="text-slate-300 text-xs mt-1">You&apos;ll see alerts here when events occur</p>
                 </div>
               ) : (
                 notifications.map((n: any) => {

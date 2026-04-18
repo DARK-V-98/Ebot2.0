@@ -158,9 +158,9 @@ export async function processMessage({ businessId, businessName, phone, contactN
   let translation = '';
   let skipAI = false;
 
-  // Numbered Selection Intercept (e.g. typing "1" or "2" for a product)
+  // Numbered Selection Intercept (e.g. typing "1" or "2" for a product/category)
   const numCheck = /^\d+$/.test(textLower) ? parseInt(textLower) : null;
-  if (numCheck && numCheck > 0 && numCheck <= 10 && context.last_products?.length >= numCheck) {
+  if (numCheck && numCheck > 0 && numCheck <= 30 && context.last_products?.length >= numCheck) {
     messageText = `prod_${context.last_products[numCheck - 1]}`;
     skipAI = true;
     intent = 'select_product';
@@ -408,6 +408,21 @@ export async function processMessage({ businessId, businessName, phone, contactN
           }
         }
       }
+      else if (messageText.startsWith('prod_catlink_')) {
+        newState = 'browsing';
+        const catName = messageText.replace('prod_catlink_', '');
+        const allProds = await productService.searchProducts(businessId, [], 1000);
+        products = allProds.filter((p: any) => p.category === catName).slice(0, 10);
+        
+        if (products.length > 0) {
+          context.last_products = products.map(p => p.id);
+          // Rely on AI to render the list text for products inside a category
+        } else {
+          // Fallback if empty category
+          replyButtons = [{ id: 'browse_products', title: '🔙 Back to Menu' }];
+          interactiveType = 'reply_buttons';
+        }
+      }
       // Handle product selection from catalog list
       else if (messageText.startsWith('prod_')) {
         const productId = messageText.replace('prod_', '');
@@ -424,21 +439,6 @@ export async function processMessage({ businessId, businessName, phone, contactN
             { id: 'buy_now', title: '🛒 Buy Now' },
             { id: 'browse_more', title: '🛍️ Browse More' }
           ];
-        }
-      }
-      else if (messageText.startsWith('prod_catlink_')) {
-        newState = 'browsing';
-        const catName = messageText.replace('prod_catlink_', '');
-        const allProds = await productService.searchProducts(businessId, [], 1000);
-        products = allProds.filter((p: any) => p.category === catName).slice(0, 10);
-        
-        if (products.length > 0) {
-          context.last_products = products.map(p => p.id);
-          // Rely on AI to render the list text for products inside a category
-        } else {
-          // Fallback if empty category
-          replyButtons = [{ id: 'browse_products', title: '🔙 Back to Menu' }];
-          interactiveType = 'reply_buttons';
         }
       }
       else if (messageText === 'browse_products' || messageText === 'browse_more') {

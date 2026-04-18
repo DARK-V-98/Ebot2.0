@@ -10,6 +10,7 @@ import {
 import clsx from 'clsx';
 import { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import NotificationBell from '@/components/NotificationBell';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
@@ -97,9 +98,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </p>
             </div>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2.5 bg-white rounded-xl shadow-sm text-slate-500 border border-slate-200 transition-transform active:scale-95">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="hidden lg:block">
+              <NotificationBell />
+            </div>
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2.5 bg-white rounded-xl shadow-sm text-slate-500 border border-slate-200 transition-transform active:scale-95">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Nav */}
@@ -178,12 +184,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
              <img src="/logo.png" alt="logo" className="w-8 h-8 object-contain" />
              <h1 className="font-black uppercase tracking-tighter">eBot</h1>
           </div>
-          <button 
-            onClick={() => setSidebarOpen(true)}
-            className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-600 active:scale-95"
-          >
-            <Menu size={22} />
-          </button>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-600 active:scale-95"
+            >
+              <Menu size={22} />
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-12">

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/server/auth';
-import { processMessage } from '@/lib/server/brain';
+import { processMediaMessage } from '@/lib/server/brain';
 
 export async function POST(req: NextRequest) {
   let business = await requireAuth(req);
@@ -9,7 +9,6 @@ export async function POST(req: NextRequest) {
   if (!business) {
     const authHeader = req.headers.get('authorization');
     if (authHeader === `Bearer dev-token`) {
-       // Look up the primary test business
        business = { id: "WqxeuouFXqLPXXW4HlAd", name: "EBot Store" };
     }
   }
@@ -18,38 +17,34 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { message, phone, name } = body;
+    const { phone, name, media } = body;
 
-    if (!message || typeof message !== 'string') {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    if (!media || !media.type) {
+      return NextResponse.json({ error: 'Media info is required' }, { status: 400 });
     }
 
-    const result = await processMessage({
+    const result = await processMediaMessage({
       businessId: business.id,
       businessName: 'Aarya Bathware',
       phone: phone || 'SIMULATOR',
       contactName: name || 'Admin Simulator',
-      messageText: message,
-      whatsappMsgId: 'wa_' + Date.now(),
+      media: media,
+      whatsappMsgId: 'wa_media_' + Date.now(),
       isSimulation: true
     });
 
     if (!result) {
-      return NextResponse.json({ error: 'AI Brain returned no response' }, { status: 500 });
+      return NextResponse.json({ error: 'AI Brain returned no response (handover mode)' }, { status: 200 });
     }
 
-    const { reply, products, replyButtons } = result;
-
     return NextResponse.json({ 
-      reply, 
-      products: products || [],
-      replyButtons: replyButtons || [],
+      reply: result.reply, 
       timestamp: new Date().toISOString() 
     });
   } catch (err: any) {
-    console.error('[simulator] Error:', err.message);
+    console.error('[simulator/media] Error:', err.message);
     return NextResponse.json({ 
-      error: `Simulation Error: ${err.message}`,
+      error: `Media Processing Error: ${err.message}`,
       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
     }, { status: 500 });
   }

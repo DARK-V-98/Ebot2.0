@@ -28,7 +28,17 @@ export async function GET(req: NextRequest) {
         return { 
           id: m.id, 
           ...d, 
-          content: d.message // Match frontend expectation
+          content: d.message, // Match frontend expectation
+          // Media fields
+          media_type: d.media_type || null,
+          media_base64: d.media_base64 || null,
+          media_caption: d.media_caption || null,
+          media_filename: d.media_filename || null,
+          media_mimetype: d.media_mimetype || null,
+          media_latitude: d.media_latitude || null,
+          media_longitude: d.media_longitude || null,
+          media_duration: d.media_duration || null,
+          media_transcription: d.media_transcription || null,
         };
       }).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 

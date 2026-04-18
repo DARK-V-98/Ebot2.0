@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 
 export default function SimulatorPage() {
   const { business } = useAuth();
-  const [messages, setMessages] = useState<{ id: string; role: 'user' | 'bot'; text: string; time: string }[]>([
+  const [messages, setMessages] = useState<{ id: string; role: 'user' | 'bot'; text: string; time: string; buttons?: { id: string; title: string }[] }[]>([
     {
       id: 'init',
       role: 'bot',
@@ -43,11 +43,15 @@ export default function SimulatorPage() {
     setLoading(true);
     try {
       const res = await api.post('/api/simulator', { message: userMessage });
+      const botReply = res.data.reply;
+      const buttons = res.data.replyButtons || [];
+      
       setMessages(prev => [...prev, {
         id: Date.now().toString() + 'b',
         role: 'bot',
-        text: res.data.reply,
-        time: res.data.timestamp
+        text: botReply,
+        time: res.data.timestamp,
+        buttons: buttons,
       }]);
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Failed to connect to Brain';
@@ -56,7 +60,8 @@ export default function SimulatorPage() {
         id: Date.now().toString() + 'e',
         role: 'bot',
         text: `🔥 System Error: ${errorMsg}`,
-        time: new Date().toISOString()
+        time: new Date().toISOString(),
+        buttons: [],
       }]);
     } finally {
       setLoading(false);
@@ -104,6 +109,58 @@ export default function SimulatorPage() {
                 }`}>
                   <p className="font-medium text-[15px] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                 </div>
+                
+                {/* Interactive Reply Buttons */}
+                {msg.role === 'bot' && msg.buttons && msg.buttons.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {msg.buttons.map((btn: any) => (
+                      <button
+                        key={btn.id}
+                        onClick={() => {
+                          setInput(btn.title);
+                          // Auto-send the button text
+                          setMessages(prev => [...prev, {
+                            id: Date.now().toString(),
+                            role: 'user',
+                            text: btn.title,
+                            time: new Date().toISOString()
+                          }]);
+                          // Trigger the API call
+                          setTimeout(async () => {
+                            setLoading(true);
+                            try {
+                              const res = await api.post('/api/simulator', { message: btn.id });
+                              setMessages(prev => [...prev, {
+                                id: Date.now().toString() + 'b',
+                                role: 'bot',
+                                text: res.data.reply,
+                                time: res.data.timestamp,
+                                buttons: res.data.replyButtons || [],
+                              }]);
+                            } catch (err: any) {
+                              const errorMsg = err.response?.data?.error || 'Failed';
+                              setMessages(prev => [...prev, {
+                                id: Date.now().toString() + 'e',
+                                role: 'bot',
+                                text: `🔥 Error: ${errorMsg}`,
+                                time: new Date().toISOString(),
+                                buttons: [],
+                              }]);
+                            } finally {
+                              setLoading(false);
+                              setInput('');
+                            }
+                          }, 100);
+                        }}
+                        disabled={loading}
+                        className="px-4 py-2.5 bg-white border-2 border-blue-200 text-blue-600 rounded-2xl text-xs font-bold hover:bg-blue-50 hover:border-blue-400 transition-all active:scale-95 shadow-sm disabled:opacity-50"
+                      >
+                        {btn.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <span className="text-[10px] text-slate-400 font-extrabold tracking-widest uppercase mt-2 px-2">
                   {new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>

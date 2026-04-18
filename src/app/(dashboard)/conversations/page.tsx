@@ -201,6 +201,7 @@ export default function ConversationsPage() {
                <AnimatePresence initial={false}>
                  {selectedConv.messages?.map((msg: any) => {
                    const isBot = msg.direction === 'outbound' || msg.direction === 'out';
+                   const hasMedia = msg.media_type;
                    return (
                      <motion.div 
                         initial={{ opacity: 0, x: isBot ? 20 : -20 }}
@@ -209,10 +210,139 @@ export default function ConversationsPage() {
                         className={clsx("flex flex-col max-w-[70%]", isBot ? "ml-auto" : "mr-auto")}
                      >
                        <div className={clsx(
-                          "px-6 py-4 text-sm rounded-3xl shadow-md font-medium leading-relaxed transition-all",
+                          "px-6 py-4 text-sm rounded-3xl shadow-md font-medium leading-relaxed transition-all overflow-hidden",
                           isBot ? "bg-blue-600 text-white rounded-tr-none" : "bg-white text-slate-900 border border-slate-100 rounded-tl-none shadow-sm"
                        )}>
-                         {msg.content}
+                         {/* --- MEDIA RENDERING --- */}
+                         {hasMedia && msg.media_type === 'image' && msg.media_base64 && (
+                           <div className="mb-3 rounded-2xl overflow-hidden -mx-2 -mt-1">
+                             <img 
+                               src={msg.media_base64} 
+                               alt="Shared image" 
+                               className="w-full max-h-64 object-cover cursor-pointer hover:scale-105 transition-transform"
+                               onClick={() => window.open(msg.media_base64, '_blank')}
+                             />
+                           </div>
+                         )}
+
+                         {hasMedia && msg.media_type === 'audio' && (
+                           <div className={clsx(
+                             "flex items-center gap-3 py-2 px-4 rounded-2xl mb-2 -mx-1",
+                             isBot ? "bg-blue-500/30" : "bg-slate-50"
+                           )}>
+                             <div className={clsx(
+                               "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                               isBot ? "bg-white/20 text-white" : "bg-blue-50 text-blue-600"
+                             )}>
+                               🎤
+                             </div>
+                             <div className="flex-1">
+                               <p className={clsx("text-xs font-bold", isBot ? "text-blue-100" : "text-slate-500")}>
+                                 Voice Message
+                                 {msg.media_duration && <span className="ml-1 opacity-60">({Math.round(msg.media_duration)}s)</span>}
+                               </p>
+                               <div className="flex gap-0.5 mt-1">
+                                 {Array.from({length: 20}).map((_, i) => (
+                                   <div key={i} className={clsx(
+                                     "w-1 rounded-full",
+                                     isBot ? "bg-white/40" : "bg-blue-300"
+                                   )} style={{height: `${Math.random() * 16 + 4}px`}} />
+                                 ))}
+                               </div>
+                             </div>
+                           </div>
+                         )}
+
+                         {hasMedia && msg.media_type === 'video' && (
+                           <div className={clsx(
+                             "flex items-center gap-3 py-3 px-4 rounded-2xl mb-2 -mx-1",
+                             isBot ? "bg-blue-500/30" : "bg-slate-50"
+                           )}>
+                             <div className="w-12 h-12 rounded-xl bg-slate-900/20 flex items-center justify-center text-2xl">
+                               🎬
+                             </div>
+                             <div>
+                               <p className={clsx("text-xs font-bold", isBot ? "text-blue-100" : "text-slate-700")}>
+                                 Video Message
+                               </p>
+                               {msg.media_duration && (
+                                 <p className={clsx("text-[10px]", isBot ? "text-blue-200" : "text-slate-400")}>
+                                   Duration: {Math.round(msg.media_duration)}s
+                                 </p>
+                               )}
+                             </div>
+                           </div>
+                         )}
+
+                         {hasMedia && msg.media_type === 'document' && (
+                           <div className={clsx(
+                             "flex items-center gap-3 py-3 px-4 rounded-2xl mb-2 -mx-1",
+                             isBot ? "bg-blue-500/30" : "bg-slate-50"
+                           )}>
+                             <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-2xl">
+                               📄
+                             </div>
+                             <div>
+                               <p className={clsx("text-xs font-bold", isBot ? "text-blue-100" : "text-slate-700")}>
+                                 {msg.media_filename || 'Document'}
+                               </p>
+                               <p className={clsx("text-[10px]", isBot ? "text-blue-200" : "text-slate-400")}>
+                                 {msg.media_mimetype || 'File attachment'}
+                               </p>
+                             </div>
+                           </div>
+                         )}
+
+                         {hasMedia && msg.media_type === 'sticker' && msg.media_base64 && (
+                           <div className="mb-2 -mx-2 -mt-1">
+                             <img 
+                               src={msg.media_base64} 
+                               alt="Sticker" 
+                               className="w-32 h-32 object-contain"
+                             />
+                           </div>
+                         )}
+
+                         {hasMedia && msg.media_type === 'location' && msg.media_latitude && (
+                           <div className="mb-3 rounded-2xl overflow-hidden -mx-2 -mt-1">
+                             <a 
+                               href={`https://maps.google.com/?q=${msg.media_latitude},${msg.media_longitude}`}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="block"
+                             >
+                               <img 
+                                 src={`https://maps.googleapis.com/maps/api/staticmap?center=${msg.media_latitude},${msg.media_longitude}&zoom=15&size=400x200&markers=color:red%7C${msg.media_latitude},${msg.media_longitude}&key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8`}
+                                 alt="Location"
+                                 className="w-full h-32 object-cover"
+                               />
+                               <div className={clsx(
+                                 "p-2 text-center text-[10px] font-bold",
+                                 isBot ? "text-blue-100" : "text-blue-600"
+                               )}>
+                                 📍 Open in Google Maps
+                               </div>
+                             </a>
+                           </div>
+                         )}
+
+                         {/* AI Analysis tag for media */}
+                         {hasMedia && msg.media_transcription && (
+                           <div className={clsx(
+                             "text-[10px] px-3 py-1.5 rounded-xl mb-2 -mx-1 border border-dashed",
+                             isBot ? "bg-blue-500/20 border-blue-400/30 text-blue-100" : "bg-purple-50 border-purple-200 text-purple-600"
+                           )}>
+                             🧠 AI Vision: {msg.media_transcription}
+                           </div>
+                         )}
+
+                         {/* Text content - show caption for media, or full text for non-media */}
+                         {hasMedia && msg.media_caption && (
+                           <span>{msg.media_caption}</span>
+                         )}
+                         {!hasMedia && msg.content && (
+                           <span>{msg.content}</span>
+                         )}
                        </div>
                        
                        {!isBot && msg.translation && (
@@ -222,6 +352,14 @@ export default function ConversationsPage() {
                        )}
 
                        <div className={clsx("flex items-center gap-2 mt-2.5 px-2", isBot ? "justify-end" : "justify-start")}>
+                         {hasMedia && (
+                           <span className={clsx(
+                             "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+                             isBot ? "bg-blue-500 text-blue-100" : "bg-slate-100 text-slate-400"
+                           )}>
+                             {msg.media_type === 'image' ? '📷' : msg.media_type === 'audio' ? '🎤' : msg.media_type === 'video' ? '🎬' : msg.media_type === 'document' ? '📄' : msg.media_type === 'sticker' ? '🎭' : msg.media_type === 'location' ? '📍' : '📎'} {msg.media_type}
+                           </span>
+                         )}
                          {isBot ? <Bot size={12} className="text-blue-600"/> : <User size={12} className="text-slate-400"/>}
                          <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">
                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

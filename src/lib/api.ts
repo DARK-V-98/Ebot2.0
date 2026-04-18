@@ -95,4 +95,11 @@ export const getCustomers = (params?: object) =>
 export const getCustomer = (id: number) =>
   api.get(`/api/customers/${id}`).then(r => r.data);
 
+// ── Notifications ─────────────────────────────────────────────────────────
+export const getNotifications = (params?: object) =>
+  api.get('/api/notifications', { params }).then(r => r.data);
+
+export const markNotificationsRead = (action: string, notificationId?: string) =>
+  api.patch('/api/notifications', { action, notificationId }).then(r => r.data);
+
 export default api;

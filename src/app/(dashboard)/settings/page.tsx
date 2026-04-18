@@ -450,7 +450,7 @@ export default function SettingsPage() {
                className="w-full bg-slate-900 text-orange-400 font-mono text-xs p-8 rounded-[40px] border border-slate-800 focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all leading-relaxed shadow-2xl" 
              />
              <p className="text-[9px] text-slate-400 font-bold ml-4">
-                Tip: Use <code className="text-orange-600">WHERE stock > 0</code> to prevent listing sold-out items. Ensure columns map to: <span className="text-slate-600 underline">id, name, price, description, category, stock, image_url</span>.
+                Tip: Use <code className="text-orange-600">WHERE stock &gt; 0</code> to prevent listing sold-out items. Ensure columns map to: <span className="text-slate-600 underline">id, name, price, description, category, stock, image_url</span>.
              </p>
           </div>
         </SettingsCard>

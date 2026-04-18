@@ -189,19 +189,34 @@ export async function deleteProduct(businessId: string, productId: string) {
 }
 
 export async function getCategories(businessId: string) {
-  // 1. Get categories from products
+  const categories = new Set<string>();
+
+  // 1. Check external cache first (as it likely contains the most recent/relevant items)
+  let cached = externalCache.get(`${businessId}_external`);
+  if (!cached) {
+    // Attempt to trigger a search to populate the cache if it's empty
+    await searchProducts(businessId, [], 100);
+    cached = externalCache.get(`${businessId}_external`);
+  }
+
+  if (cached && Array.isArray(cached.data)) {
+    cached.data.forEach((p: any) => {
+      if (p.category) categories.add(p.category);
+    });
+  }
+
+  // 2. Get categories from local Firestore products
   const snapshot = await db.collection('products')
     .where('business_id', '==', businessId)
     .where('is_active', '==', 1)
     .get();
     
-  const categories = new Set<string>();
   snapshot.docs.forEach((doc) => {
     const c = doc.data().category;
     if (c) categories.add(c);
   });
 
-  // 2. Get master categories from business config
+  // 3. Get master categories from business config
   const bizDoc = await db.collection('businesses').doc(businessId).get();
   const syncedCats = bizDoc.data()?.synced_categories;
   if (Array.isArray(syncedCats)) {

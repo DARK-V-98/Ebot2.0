@@ -441,13 +441,11 @@ export async function processMessage({ businessId, businessName, phone, contactN
           interactiveType = 'reply_buttons';
         }
       }
-      // Detect button response IDs
       else if (messageText === 'browse_products' || messageText === 'browse_more') {
         newState = 'browsing';
-        const allProds = await productService.searchProducts(businessId, [], 1000);
-        const categories = Array.from(new Set(allProds.map((p: any) => p.category).filter(Boolean)));
+        const rawCategories = await productService.getCategories(businessId);
         
-        products = categories.slice(0, 10).map((c: any) => ({
+        products = rawCategories.slice(0, 30).map((c: any) => ({
            id: `catlink_${c}`,
            name: `📁 ${c}`,
            price: 'Select to view items',

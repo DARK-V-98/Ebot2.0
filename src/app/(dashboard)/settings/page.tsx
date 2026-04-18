@@ -303,11 +303,35 @@ export default function SettingsPage() {
                  placeholder="https://yourwebsite.com/api/products" 
                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-black placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/40 transition-all text-sm" 
                />
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                 <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">API Authentication Key</label>
+                   <div className="relative group">
+                     <Key size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                     <input 
+                       type="password" 
+                       value={syncData.external_inventory_key}
+                       onChange={e => setSyncData({ ...syncData, external_inventory_key: e.target.value })}
+                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-14 pr-4 text-slate-900 font-black focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all text-sm" 
+                     />
+                   </div>
+                 </div>
+                 <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Target Header Name</label>
+                   <input 
+                     type="text" 
+                     value={syncData.external_inventory_header}
+                     onChange={e => setSyncData({ ...syncData, external_inventory_header: e.target.value })}
+                     placeholder="x-api-key" 
+                     className="w-full bg-slate-100 text-blue-600 font-black border border-slate-200 rounded-2xl py-4 px-6 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all text-sm uppercase tracking-widest shadow-inner" 
+                   />
+                 </div>
+               </div>
              </div>
           </div>
         </SettingsCard>
 
-        {/* NEW: External Firebase Bridge */}
+        {/* Restore: External Firebase Bridge */}
         <SettingsCard 
           title="Neural Sync" 
           subtitle="Direct Connection to External Firebase Project" 
@@ -361,7 +385,7 @@ export default function SettingsPage() {
           </div>
         </SettingsCard>
 
-        {/* NEW: SQL Database Bridge */}
+        {/* Restore: SQL Database Bridge */}
         <SettingsCard 
           title="Digital Backbone" 
           subtitle="Direct Remote SQL Connection (MySQL/MariaDB)" 
@@ -428,32 +452,6 @@ export default function SettingsPage() {
              <p className="text-[9px] text-slate-400 font-bold ml-4">
                 Tip: Use <code className="text-orange-600">WHERE stock > 0</code> to prevent listing sold-out items. Ensure columns map to: <span className="text-slate-600 underline">id, name, price, description, category, stock, image_url</span>.
              </p>
-          </div>
-        </SettingsCard>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">API Authentication Key</label>
-              <div className="relative group">
-                <Key size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-                <input 
-                  type="password" 
-                  value={syncData.external_inventory_key}
-                  onChange={e => setSyncData({ ...syncData, external_inventory_key: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-14 pr-4 text-slate-900 font-black focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all text-sm" 
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Target Header Name</label>
-              <input 
-                type="text" 
-                value={syncData.external_inventory_header}
-                onChange={e => setSyncData({ ...syncData, external_inventory_header: e.target.value })}
-                placeholder="x-api-key" 
-                className="w-full bg-slate-100 text-blue-600 font-black border border-slate-200 rounded-2xl py-4 px-6 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all text-sm uppercase tracking-widest shadow-inner" 
-              />
-            </div>
           </div>
         </SettingsCard>
 

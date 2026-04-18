@@ -142,8 +142,11 @@ export async function processMessage({ businessId, businessName, phone, contactN
   const customer: any = await userService.findOrCreateCustomer(businessId, phone, contactName);
 
   const textLower = messageText.toLowerCase().trim();
-  const greetings = ['hi', 'hello', 'hey', 'start', 'halo', 'hi ebot'];
+  const greetings = ['hi', 'hello', 'hey', 'start', 'halo', 'hi ebot', 'hy'];
   const thanksList = ['thanks', 'thank you', 'ok', 'okay', 'done', 'tq'];
+  const menuList = ['menu', 'products', 'items', 'catalog', 'buy'];
+  const locationList = ['location', 'address', 'shop', 'map', 'where are you', 'where'];
+  const contactList = ['human', 'agent', 'call', 'real person', 'help', 'customer service'];
 
   let language = customer.language || 'english';
   let intent = 'unknown';
@@ -151,11 +154,21 @@ export async function processMessage({ businessId, businessName, phone, contactN
   let translation = '';
   let skipAI = false;
 
+  // Pattern Matching to aggressively bypass Expensive AI
   if (greetings.includes(textLower)) {
     intent = 'greeting';
     skipAI = true;
   } else if (thanksList.includes(textLower)) {
     intent = 'thanks';
+    skipAI = true;
+  } else if (menuList.includes(textLower)) {
+    intent = 'search_product'; // Maps to browse menu
+    skipAI = true;
+  } else if (locationList.includes(textLower)) {
+    intent = 'location';
+    skipAI = true;
+  } else if (contactList.includes(textLower)) {
+    intent = 'handover';
     skipAI = true;
   }
 
@@ -492,6 +505,12 @@ export async function processMessage({ businessId, businessName, phone, contactN
         `Anytime! Have a great day. 🌟`
       ];
       reply = thanksReplies[Math.floor(Math.random() * thanksReplies.length)];
+    } else if (intent === 'search_product') {
+      reply = `I'd be happy to show you what we have! Please explore our product menu below. 👇`;
+    } else if (intent === 'location') {
+      reply = `We'd love to see you! We are located at 80 Polgasowita Rd, Kottawa. Click the map link below for directions. 📍`;
+    } else if (intent === 'handover') {
+      reply = `No problem. I have notified our human agents. Someone will be with you shortly! 👨‍💼`;
     }
   } else {
     reply = await aiService.generateReply({

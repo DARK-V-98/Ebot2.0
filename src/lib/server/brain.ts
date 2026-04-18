@@ -406,11 +406,36 @@ export async function processMessage({ businessId, businessName, phone, contactN
           ];
         }
       }
+      else if (messageText.startsWith('prod_catlink_')) {
+        newState = 'browsing';
+        const catName = messageText.replace('prod_catlink_', '');
+        const allProds = await productService.searchProducts(businessId, [], 1000);
+        products = allProds.filter((p: any) => p.category === catName).slice(0, 10);
+        
+        if (products.length > 0) {
+          interactiveType = 'list';
+        } else {
+          // Fallback if empty category
+          replyButtons = [{ id: 'browse_products', title: '🔙 Back to Menu' }];
+          interactiveType = 'reply_buttons';
+        }
+      }
       // Detect button response IDs
       else if (messageText === 'browse_products' || messageText === 'browse_more') {
         newState = 'browsing';
-        products = await productService.searchProducts(businessId, [], 10);
-        if (products.length > 0) interactiveType = 'list';
+        const allProds = await productService.searchProducts(businessId, [], 1000);
+        const categories = Array.from(new Set(allProds.map((p: any) => p.category).filter(Boolean)));
+        
+        products = categories.slice(0, 10).map((c: any) => ({
+           id: `catlink_${c}`,
+           name: `📁 ${c}`,
+           price: 'Select to view items',
+           category: 'Category Collection'
+        }));
+        
+        if (products.length > 0) {
+          interactiveType = 'list';
+        }
       }
       else if (messageText === 'check_orders' || messageText === 'check_order') {
         context.last_intent = 'check_order';
@@ -453,9 +478,20 @@ export async function processMessage({ businessId, businessName, phone, contactN
   
   if (skipAI) {
     if (intent === 'greeting') {
-      reply = `Hello! Welcome to ${businessName}. How can I help you today?`;
+      const greetingsList = [
+        `Hello! 🌟 Welcome to ${businessName}. How can I help you today?`,
+        `Hi there! 👋 Welcome to ${businessName}. Looking for anything specific?`,
+        `Greetings! 😊 Welcome to ${businessName}. What can I do for you today?`,
+        `Hey! ✨ Thank you for contacting ${businessName}. How may I assist you?`
+      ];
+      reply = greetingsList[Math.floor(Math.random() * greetingsList.length)];
     } else if (intent === 'thanks') {
-      reply = `You're welcome! Let me know if you need anything else.`;
+      const thanksReplies = [
+        `You're welcome! Let me know if you need anything else. 😊`,
+        `Happy to help! Reach out anytime. 👍`,
+        `Anytime! Have a great day. 🌟`
+      ];
+      reply = thanksReplies[Math.floor(Math.random() * thanksReplies.length)];
     }
   } else {
     reply = await aiService.generateReply({

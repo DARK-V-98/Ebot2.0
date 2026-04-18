@@ -140,6 +140,10 @@ export async function processMediaMessage({ businessId, businessName, phone, con
 
 export async function processMessage({ businessId, businessName, phone, contactName, messageText, whatsappMsgId, isSimulation = false }: any) {
   const customer: any = await userService.findOrCreateCustomer(businessId, phone, contactName);
+  const session: any = await getSession(customer.id);
+  const context = session.context_json
+    ? (typeof session.context_json === 'string' ? JSON.parse(session.context_json) : session.context_json)
+    : {};
 
   const textLower = messageText.toLowerCase().trim();
   const greetings = ['hi', 'hello', 'hey', 'start', 'halo', 'hi ebot', 'hy'];
@@ -154,8 +158,15 @@ export async function processMessage({ businessId, businessName, phone, contactN
   let translation = '';
   let skipAI = false;
 
+  // Numbered Selection Intercept (e.g. typing "1" or "2" for a product)
+  const numCheck = /^\d+$/.test(textLower) ? parseInt(textLower) : null;
+  if (numCheck && numCheck > 0 && numCheck <= 10 && context.last_products?.length >= numCheck) {
+    messageText = `prod_${context.last_products[numCheck - 1]}`;
+    skipAI = true;
+    intent = 'select_product';
+  }
   // Pattern Matching to aggressively bypass Expensive AI
-  if (greetings.includes(textLower)) {
+  else if (greetings.includes(textLower)) {
     intent = 'greeting';
     skipAI = true;
   } else if (thanksList.includes(textLower)) {
@@ -196,8 +207,6 @@ export async function processMessage({ businessId, businessName, phone, contactN
     whatsappMsgId,
   });
 
-  const session: any = await getSession(customer.id);
-
   // --- HANDOVER CHECK ---
   if (session.state === 'handover' && intent !== 'cancel') {
      console.log(`[brain] Handover active for ${phone}. AI is silent.`);
@@ -216,9 +225,6 @@ export async function processMessage({ businessId, businessName, phone, contactN
      return null; 
   }
 
-  const context = session.context_json
-    ? (typeof session.context_json === 'string' ? JSON.parse(session.context_json) : session.context_json)
-    : {};
   const history = await messageService.getHistory(customer.id, 10);
 
   let newState = session.state;

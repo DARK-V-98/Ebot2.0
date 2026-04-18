@@ -74,7 +74,7 @@ export async function generateReply({ userMessage, language, intent, businessNam
   
   if (products && products.length > 0) {
     const topProducts = products.slice(0, 10);
-    productContextText = topProducts.map((p: any) => `- ${p.name}: Rs.${p.price} (${p.category || 'General'})`).join('\n');
+    productContextText = topProducts.map((p: any, idx: number) => `[Item ${idx + 1}] ${p.name} - Rs.${p.price}`).join('\n');
     
     if (products.length > 10) {
       productContextText += `\n...and ${products.length - 10} more items in stock.`;
@@ -102,13 +102,10 @@ IMPORTANT IDENTITY RULES:
 - Do NOT address the customer by their personal name unless they introduce themselves.
 
 🔥 ADVANCED SALES TACTICS (CRITICAL):
-1. UPSELLING & CROSS-SELLING: If a customer asks for a product, ALWAYS politely suggest ONE related complementary item. (e.g., If they want Paint, suggest a Paint Roller or Thinner. If they want a Sink, suggest a Faucet).
-2. CREATE URGENCY (FOMO): If any product in the "Relevant products" list has a stock count less than 5, you MUST warn them immediately: "🚨 Just a heads up, we only have ${'<STOCK>'} of these left in stock. Let me know if you want to grab it before it sells out!"
-3. SMART PRICING: Always include prices (Rs.) naturally when discussing items.
-
-WEBSITE & LINKS:
-- Store: https://www.aaryahardware.lk
-- Always include a Smart Search Link for mentioned items: https://www.aaryahardware.lk/products?search=[ITEM_NAME]
+1. UPSELLING & CROSS-SELLING: If a customer asks for a product, politely suggest ONE related complementary item.
+2. NUMBERED SELECTION MENU: When listing multiple products from the "Current Selection" below, you MUST format them clearly as a numbered list (e.g., "1️⃣ Bathtub - Rs. 5000", "2️⃣ Faucet - Rs. 2000"). NEVER USE URL LINKS. Instead, instruct the customer to literally reply with the number (e.g., "Reply with 1 or 2 to see photos and purchase! 👇").
+3. CREATE URGENCY (FOMO): If an item has low stock, mention it to create urgency!
+4. SMART PRICING: Always include prices (Rs.) naturally when discussing items.
 
 ADDRESS & LOCATION (Golden Rule):
 ONLY provide the address if they explicitly ask for it! Never spam the address.

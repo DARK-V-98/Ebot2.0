@@ -410,13 +410,15 @@ export async function processMessage({ businessId, businessName, phone, contactN
       }
       else if (messageText.startsWith('prod_catlink_')) {
         newState = 'browsing';
-        const catName = messageText.replace('prod_catlink_', '');
-        const allProds = await productService.searchProducts(businessId, [], 1000);
-        products = allProds.filter((p: any) => p.category === catName).slice(0, 10);
+        const catName = messageText.replace('prod_catlink_', '').trim();
+        const res = await productService.listProducts(businessId, { category: catName, limit: 15 });
+        products = res.products;
         
         if (products.length > 0) {
           context.last_products = products.map(p => p.id);
-          // Rely on AI to render the list text for products inside a category
+          const itemsText = products.map((p, i) => `${i + 1}️⃣ ${p.name} - Rs.${p.price}`).join('\n');
+          reply = `Here are the items in our *${catName}* collection! 🛍️\n\n${itemsText}\n\nReply with a number to see photos! 👇`;
+          interactiveType = 'none';
         } else {
           // Fallback if empty category
           replyButtons = [{ id: 'browse_products', title: '🔙 Back to Menu' }];
@@ -518,6 +520,11 @@ export async function processMessage({ businessId, businessName, phone, contactN
     } else if (intent === 'browse_menu') {
       const itemsList = products.map((c: any, i: number) => `${i + 1}️⃣ ${c.name.replace('📁 ', '')}`).join('\n');
       reply = `I'd be happy to show you what we have! Please reply with the number of the category below: 👇\n\n${itemsList}`;
+    } else if (intent === 'select_product') {
+      // reply is already populated inside the switch/if-else blocks for prod_ and prod_catlink_
+      if (!reply) {
+         reply = "I've selected that item for you! What would you like to do next?";
+      }
     }
   } else {
     reply = await aiService.generateReply({

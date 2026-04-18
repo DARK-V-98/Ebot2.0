@@ -89,26 +89,30 @@ export async function searchProducts(businessId: string, keywords: string[] = []
 }
 
 export async function listProducts(businessId: string, { page = 1, limit = 1000, category = '', search = '' } = {}) {
-  let query: any = db.collection('products')
-    .where('business_id', '==', businessId)
-    .where('is_active', '==', 1);
+  let products: any[] = [];
 
-  if (category) {
-    query = query.where('category', '==', category);
+  // 1. Get products from external cache first
+  const cacheKey = `${businessId}_external`;
+  let cached = externalCache.get(cacheKey);
+  if (cached && Array.isArray(cached.data)) {
+    products = [...cached.data];
   }
 
-  // Fetch without orderBy to avoid index requirement, sort in memory
-  const snapshot = await query.get();
+  // 2. Supplement with local Firestore products
+  const snapshot = await db.collection('products')
+    .where('business_id', '==', businessId)
+    .where('is_active', '==', 1)
+    .get();
   
-  let products = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+  const localProducts = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+  products = [...products, ...localProducts];
 
-  // Sort in memory by created_at desc
-  products.sort((a: any, b: any) => {
-    const timeA = new Date(a.created_at || 0).getTime();
-    const timeB = new Date(b.created_at || 0).getTime();
-    return timeB - timeA;
-  });
-  
+  // 3. Apply Filters (Category & Search)
+  if (category) {
+    const catSearch = category.toLowerCase().trim();
+    products = products.filter((p: any) => String(p.category || '').toLowerCase().trim() === catSearch);
+  }
+
   if (search) {
     const s = search.toLowerCase();
     products = products.filter((p: any) => 
@@ -117,6 +121,13 @@ export async function listProducts(businessId: string, { page = 1, limit = 1000,
       (p.description || '').toLowerCase().includes(s)
     );
   }
+
+  // 4. Sort in memory by created_at desc (local items) or just generally
+  products.sort((a: any, b: any) => {
+    const timeA = new Date(a.created_at || 0).getTime();
+    const timeB = new Date(b.created_at || 0).getTime();
+    return timeB - timeA;
+  });
 
   const offset = (page - 1) * limit;
   const total = products.length;

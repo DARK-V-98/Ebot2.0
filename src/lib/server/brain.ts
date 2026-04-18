@@ -230,6 +230,7 @@ export async function processMessage({ businessId, businessName, phone, contactN
   let newState = session.state;
   let products: any[] = [];
   // Tracks which interactive UI to send
+  let reply = '';
   let interactiveType: 'none' | 'reply_buttons' | 'list' | 'cta' | 'image' = 'none';
   let replyButtons: { id: string; title: string }[] = [];
   let ctaUrl = '';
@@ -495,8 +496,6 @@ export async function processMessage({ businessId, businessName, phone, contactN
 
   await updateSession(customer.id, newState, context);
 
-  let reply = '';
-  
   if (skipAI) {
     if (intent === 'greeting') {
       const greetingsList = [

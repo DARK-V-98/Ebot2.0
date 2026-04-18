@@ -141,10 +141,34 @@ export async function processMediaMessage({ businessId, businessName, phone, con
 export async function processMessage({ businessId, businessName, phone, contactName, messageText, whatsappMsgId, isSimulation = false }: any) {
   const customer: any = await userService.findOrCreateCustomer(businessId, phone, contactName);
 
-  const { language, intent, extracted_keywords, translation } = await aiService.detectLanguageAndIntent(messageText);
+  const textLower = messageText.toLowerCase().trim();
+  const greetings = ['hi', 'hello', 'hey', 'start', 'halo', 'hi ebot'];
+  const thanksList = ['thanks', 'thank you', 'ok', 'okay', 'done', 'tq'];
 
-  if (language !== 'unknown' && customer.language !== language) {
-    await userService.updateCustomerLanguage(customer.id, language);
+  let language = customer.language || 'english';
+  let intent = 'unknown';
+  let extracted_keywords: string[] = [];
+  let translation = '';
+  let skipAI = false;
+
+  if (greetings.includes(textLower)) {
+    intent = 'greeting';
+    skipAI = true;
+  } else if (thanksList.includes(textLower)) {
+    intent = 'thanks';
+    skipAI = true;
+  }
+
+  if (!skipAI) {
+    const aiResult = await aiService.detectLanguageAndIntent(messageText);
+    language = aiResult.language;
+    intent = aiResult.intent;
+    extracted_keywords = aiResult.extracted_keywords;
+    translation = aiResult.translation;
+
+    if (language !== 'unknown' && customer.language !== language) {
+      await userService.updateCustomerLanguage(customer.id, language);
+    }
   }
 
   await messageService.saveMessage({
@@ -202,6 +226,11 @@ export async function processMessage({ businessId, businessName, phone, contactN
         { id: 'check_orders', title: '📦 My Orders' },
         { id: 'get_location', title: '📍 Store Location' },
       ];
+      break;
+
+    case 'thanks':
+      newState = session.state; // preserve state
+      interactiveType = 'none';
       break;
 
     case 'search_product':
@@ -420,15 +449,25 @@ export async function processMessage({ businessId, businessName, phone, contactN
 
   await updateSession(customer.id, newState, context);
 
-  const reply = await aiService.generateReply({
-    userMessage:     messageText,
-    language:        language !== 'unknown' ? language : (customer.language || 'english'),
-    intent,
-    businessName,
-    products,
-    sessionContext:  { state: newState, ...context },
-    history,
-  });
+  let reply = '';
+  
+  if (skipAI) {
+    if (intent === 'greeting') {
+      reply = `Hello! Welcome to ${businessName}. How can I help you today?`;
+    } else if (intent === 'thanks') {
+      reply = `You're welcome! Let me know if you need anything else.`;
+    }
+  } else {
+    reply = await aiService.generateReply({
+      userMessage:     messageText,
+      language:        language !== 'unknown' ? language : (customer.language || 'english'),
+      intent,
+      businessName,
+      products,
+      sessionContext:  { state: newState, ...context },
+      history:         history.slice(-4), // Context Shrinking: passing only last 4 messages instead of 10
+    });
+  }
 
   await messageService.saveMessage({
     businessId,

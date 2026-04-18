@@ -148,7 +148,7 @@ export async function processMessage({ businessId, businessName, phone, contactN
   const textLower = messageText.toLowerCase().trim();
   const greetings = ['hi', 'hello', 'hey', 'start', 'halo', 'hi ebot', 'hy'];
   const thanksList = ['thanks', 'thank you', 'ok', 'okay', 'done', 'tq'];
-  const menuList = ['menu', 'products', 'items', 'catalog', 'buy'];
+  const menuList = ['menu', 'products', 'items', 'catalog', 'buy', 'browse_products', 'browse_more'];
   const locationList = ['location', 'address', 'shop', 'map', 'where are you', 'where'];
   const contactList = ['human', 'agent', 'call', 'real person', 'help', 'customer service'];
 
@@ -175,7 +175,7 @@ export async function processMessage({ businessId, businessName, phone, contactN
   } else if (menuList.includes(textLower)) {
     intent = 'browse_menu'; 
     skipAI = true;
-    messageText = 'browse_products'; // Fake a button press to trigger the Category logic below
+    messageText = 'browse_products'; // Normalize to the button ID
   } else if (locationList.includes(textLower)) {
     intent = 'location';
     skipAI = true;

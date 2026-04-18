@@ -422,6 +422,7 @@ export async function processMessage({ businessId, businessName, phone, contactN
           interactiveType = 'none';
         } else {
           // Fallback if empty category
+          reply = `I'm sorry! We don't have any items in the *${catName}* collection at the moment. 😔`;
           replyButtons = [{ id: 'browse_products', title: '🔙 Back to Menu' }];
           interactiveType = 'reply_buttons';
         }

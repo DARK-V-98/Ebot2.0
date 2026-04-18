@@ -91,9 +91,16 @@ export async function searchProducts(businessId: string, keywords: string[] = []
 export async function listProducts(businessId: string, { page = 1, limit = 1000, category = '', search = '' } = {}) {
   let products: any[] = [];
 
-  // 1. Get products from external cache first
+  // 1. Get products from external cache (ensure it is populated)
   const cacheKey = `${businessId}_external`;
   let cached = externalCache.get(cacheKey);
+  
+  if (!cached || (Date.now() - cached.timestamp >= CACHE_TTL)) {
+    // Re-trigger search to populate cache
+    await searchProducts(businessId, [], 1000);
+    cached = externalCache.get(cacheKey);
+  }
+
   if (cached && Array.isArray(cached.data)) {
     products = [...cached.data];
   }
@@ -110,7 +117,10 @@ export async function listProducts(businessId: string, { page = 1, limit = 1000,
   // 3. Apply Filters (Category & Search)
   if (category) {
     const catSearch = category.toLowerCase().trim();
-    products = products.filter((p: any) => String(p.category || '').toLowerCase().trim() === catSearch);
+    products = products.filter((p: any) => {
+       const pCat = String(p.category || '').toLowerCase().trim();
+       return pCat === catSearch || pCat.includes(catSearch) || catSearch.includes(pCat);
+    });
   }
 
   if (search) {

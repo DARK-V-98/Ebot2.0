@@ -433,7 +433,8 @@ export async function processMessage({ businessId, businessName, phone, contactN
         products = allProds.filter((p: any) => p.category === catName).slice(0, 10);
         
         if (products.length > 0) {
-          interactiveType = 'list';
+          context.last_products = products.map(p => p.id);
+          // Rely on AI to render the list text for products inside a category
         } else {
           // Fallback if empty category
           replyButtons = [{ id: 'browse_products', title: '🔙 Back to Menu' }];
@@ -454,7 +455,7 @@ export async function processMessage({ businessId, businessName, phone, contactN
         }));
         
         if (products.length > 0) {
-          interactiveType = 'list';
+          context.last_products = products.map((p: any) => p.id);
         }
       }
       else if (messageText === 'check_orders' || messageText === 'check_order') {
@@ -517,7 +518,8 @@ export async function processMessage({ businessId, businessName, phone, contactN
     } else if (intent === 'handover') {
       reply = `No problem. I have notified our human agents. Someone will be with you shortly! 👨‍💼`;
     } else if (intent === 'browse_menu') {
-      reply = `I'd be happy to show you what we have! Please explore our product menu below. 👇`;
+      const itemsList = products.map((c: any, i: number) => `${i + 1}️⃣ ${c.name.replace('📁 ', '')}`).join('\n');
+      reply = `I'd be happy to show you what we have! Please reply with the number of the category below: 👇\n\n${itemsList}`;
     }
   } else {
     reply = await aiService.generateReply({

@@ -102,7 +102,7 @@ export async function processMessage({ businessId, phone, contactName, messageTe
   const session: any = await getSession(user.id);
   const context = session.context_json ? JSON.parse(session.context_json) : {};
 
-  const textLower = messageText.toLowerCase().trim();
+  let textLower = messageText.toLowerCase().trim();
   let language = user.language || 'english';
   let intent = 'unknown';
   let skipAI = false;

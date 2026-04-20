@@ -13,6 +13,7 @@ interface Business {
   whatsapp_phone_id?: string;
   package_status?: 'none' | 'pending' | 'active';
   subscription_tier?: string;
+  role?: string;
 }
 
 interface AuthContextType {

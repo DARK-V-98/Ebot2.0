@@ -35,14 +35,15 @@ Return JSON in this exact format:
 Rules:
 - "sinhala" = pure Sinhala script (Unicode)
 - "singlish" = Sinhala written in English letters (e.g., "mama eka ganna one")
-- "tamil" = pure Tamil script (Unicode)
-- "english" = standard English
-- "handover" = customer asks for human, owner, manager, or help.
-- "translation" = ALWAYS provide a clear English translation of the customer's message.
-- "location" = customer asking for address, map, or shop location.
-- "extracted_keywords" = 🎯 CRITICAL: Extract ONLY product nouns (e.g. "sink", "faucet", "paint"). NEVER extract verbs like "buy", "show", or generic words like "price". If no specific product is mentioned, return an empty array [].
+- "translation" = ALWAYS provide a clear English translation of any non-English message.
+- "extracted_keywords" = 🎯 CRITICAL: Map customer terms to these Standard Categories:
+  * "Valve", "Walve", "Valva", "Bung" -> Map to search keyword "Valve"
+  * "Mixer", "Tap", "Kokku", "Faucet" -> Map to search keyword "Mixer"
+  * "Flush", "Set", "Commode part" -> Map to search keyword "Flush set"
+  * "Shower", "Ros", "Hand shower" -> Map to search keyword "Shower"
+- ONLY extract product nouns. Ensure keywords are standard English for database lookup.
 - Detect intent from context: product mentions = search_product, help/info = help.
-- 🚫 IMPORTANT: "place_order" intent is NO LONGER SUPPORTED. If a customer says they want to buy or "ganna", classify it as "search_product" or "unknown" and let the reply generator handle the redirect.
+- 🚫 IMPORTANT: "place_order" intent is NO LONGER SUPPORTED.
 `;
 
   // Try Gemini models first

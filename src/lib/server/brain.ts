@@ -6,6 +6,7 @@ import * as orderService from './orderService';
 import * as whatsappService from './whatsappService';
 import * as mediaService from './mediaService';
 import * as notificationService from './notificationService';
+import * as correctionService from './correctionService';
 import { db } from '../firebase/firebaseAdmin';
 
 const DEFAULT_BUSINESS_NAME = "Aarya Bathware";
@@ -260,6 +261,13 @@ export async function processMessage({ businessId, phone, contactName, messageTe
       reply = `I'll connect you with our support team. Please wait... 👨‍💼`;
       await updateSession(user.id, 'handover', context);
       break;
+  }
+
+  if (!reply) {
+    const correctionMatch = await correctionService.findMatchingCorrection(businessId, messageText);
+    if (correctionMatch) {
+      reply = correctionMatch;
+    }
   }
 
   if (!reply) {

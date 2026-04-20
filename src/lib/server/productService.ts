@@ -58,7 +58,7 @@ export async function searchProducts(businessId: string, keywords: string[] = []
   try {
     const catMap = await getCategoryMap();
     const snapshot = await db.collection('products').limit(500).get();
-    let products = snapshot.docs.map(doc => mapProduct(doc, catMap));
+    let products = snapshot.docs.map((doc: any) => mapProduct(doc, catMap));
 
     if (keywords.length) {
         products = products.filter((p: Product) => {
@@ -88,7 +88,7 @@ export async function listProducts(businessId: string, { page = 1, limit = 500, 
     const snapshot = await db.collection('products').limit(1000).get();
     console.log(`[product-service] Found ${snapshot.size} total docs`);
     
-    let products = snapshot.docs.map(doc => mapProduct(doc, catMap));
+    let products = snapshot.docs.map((doc: any) => mapProduct(doc, catMap));
 
     // 3. Filter by Category (match Name or ID)
     if (category) {
@@ -171,7 +171,7 @@ export async function getCategories(businessId: string) {
   try {
     console.log(`[product-service] Fetching categories...`);
     const catSnapshot = await db.collection('categories').get();
-    const categories = catSnapshot.docs.map(doc => {
+    const categories = catSnapshot.docs.map((doc: any) => {
       const data = doc.data();
       return data.name || data.title || doc.id;
     });

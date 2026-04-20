@@ -63,15 +63,15 @@ export async function listUsers(businessId: string, { page = 1, limit = 20, role
   const offset = (page - 1) * limit;
   const snapshot = await query.get();
   
-  let docs = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() as any }));
+  let docs = snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => ({ id: doc.id, ...doc.data() as any }));
   
   // Sort in memory
-  docs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  docs.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
   const total = docs.length;
   const paginatedDocs = docs.slice(offset, offset + limit);
 
-  const users = await Promise.all(paginatedDocs.map(async (docData) => {
+  const users = await Promise.all(paginatedDocs.map(async (docData: any) => {
     const ordersSnap = await db.collection('orders').where('userId', '==', docData.id).count().get();
 
     return {

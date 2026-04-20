@@ -98,7 +98,7 @@ export async function sendReplyButtons(businessId: string, to: string, text: str
     const config = bizDoc.data();
     if (!config) throw new Error('Business not found');
 
-    const buttonList = buttons.slice(0, 3).map(b => ({
+    const buttonList = buttons.slice(0, 3).map((b: any) => ({
       type: 'reply',
       reply: { id: b.id, title: b.title.substring(0, 20) }
     }));
@@ -111,7 +111,7 @@ export async function sendReplyButtons(businessId: string, to: string, text: str
         title: 'Quick Actions',
         description: text,
         footer: footer || '',
-        buttons: buttons.slice(0, 3).map(b => ({
+        buttons: buttons.slice(0, 3).map((b: any) => ({
           buttonId: b.id,
           buttonText: { displayText: b.title.substring(0, 20) },
           type: 1

@@ -54,7 +54,7 @@ export async function listOrders(businessId: string, { page = 1, limit = 20, sta
   let ordersList = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) as Order[];
 
   // Sort desc by createdAt
-  ordersList.sort((a, b) => {
+  ordersList.sort((a: any, b: any) => {
     const timeA = a.createdAt?.toDate?.()?.getTime() || 0;
     const timeB = b.createdAt?.toDate?.()?.getTime() || 0;
     return timeB - timeA;
@@ -85,7 +85,7 @@ export async function updateOrderStatus(businessId: string, orderId: string, sta
 
 export async function getOrderStats(businessId: string) {
   const snapshot = await db.collection('orders').get();
-  const orders = snapshot.docs.map(doc => doc.data() as Order);
+  const orders = snapshot.docs.map((doc: any) => doc.data() as Order);
 
   const stats = {
     pending: 0,

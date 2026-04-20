@@ -281,7 +281,7 @@ export async function processMessage({ businessId, phone, contactName, messageTe
   if (reply === 'ERROR_AI_LIMIT_REACHED') {
     await notificationService.createNotification({
       businessId,
-      type: 'system_alert',
+      type: 'system',
       title: '🚨 AI Limit Reached',
       body: `Your AI credits or API limits are exhausted for Aarya Bathware. Please check your billing or API keys immediately.`,
       link: '/admin/system',

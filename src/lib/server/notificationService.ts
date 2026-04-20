@@ -53,7 +53,7 @@ export async function getNotifications(businessId: string, { page = 1, limit = 3
     .where('business_id', '==', businessId)
     .get();
 
-  let notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  let notifications = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
 
   // Sort by created_at desc in memory
   notifications.sort((a: any, b: any) => {

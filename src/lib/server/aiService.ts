@@ -149,6 +149,7 @@ Respond naturally based on the intent:
       lastGeminiError = err.message;
     }
   }
-
-  return `⚠️ AI Error: All Gemini models failed. (Last Gemini error: ${lastGeminiError})`;
+  
+  console.error(`[aiService] CRITICAL: All models failed. Last error: ${lastGeminiError}`);
+  return 'ERROR_AI_LIMIT_REACHED';
 }

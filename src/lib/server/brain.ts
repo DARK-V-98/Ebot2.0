@@ -277,6 +277,22 @@ export async function processMessage({ businessId, phone, contactName, messageTe
     });
   }
 
+  // --- AI LIMIT / ERROR HANDLING ---
+  if (reply === 'ERROR_AI_LIMIT_REACHED') {
+    await notificationService.createNotification({
+      businessId,
+      type: 'system_alert',
+      title: '🚨 AI Limit Reached',
+      body: `Your AI credits or API limits are exhausted for Aarya Bathware. Please check your billing or API keys immediately.`,
+      link: '/admin/system',
+      customerId: user.id,
+      customerName: user.name || user.phone,
+    });
+    
+    // Do NOT send the error code to the customer
+    return { reply: '', products: [], interactiveType: 'none', replyButtons: [], welcomeReply: '' };
+  }
+
   await messageService.saveMessage({
     businessId,
     customerId: user.id,
@@ -286,9 +302,8 @@ export async function processMessage({ businessId, phone, contactName, messageTe
     language,
   });
 
-  if (!isSimulation) {
+  if (!isSimulation && reply) {
     await whatsappService.sendMessage(businessId, phone, reply);
-    // Note: Send interactive elements here if implemented
   }
 
   return { reply, products, interactiveType, replyButtons, welcomeReply };

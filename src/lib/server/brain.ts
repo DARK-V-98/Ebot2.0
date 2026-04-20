@@ -60,7 +60,9 @@ export async function processMediaMessage({ businessId, phone, contactName, medi
     whatsappMsgId,
   });
 
+  const session: any = await getSession(user.id);
   const history = await messageService.getHistory(user.id, 10);
+  let products: any[] = [];
   let mediaContext = `User sent a ${media.type}. `;
   if (media.type === 'image') mediaContext += `Analysis: "${media.transcription}"`;
 

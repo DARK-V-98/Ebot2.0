@@ -79,7 +79,7 @@ export async function listUsers(businessId: string, { page = 1, limit = 20, role
   return { users, total: totalSnap.data().count, page, limit };
 }
 
-export async function getUser(userId: string) {
+export async function getCustomer(businessId: string, userId: string) {
   const doc = await db.collection('users').doc(userId).get();
   if (!doc.exists) return null;
   return { id: doc.id, ...doc.data() } as User;

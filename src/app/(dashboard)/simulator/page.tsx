@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
-import { Send, Bot, User, RefreshCcw } from 'lucide-react';
+import { Send, Bot, User, RefreshCcw, Zap } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'react-hot-toast';
 

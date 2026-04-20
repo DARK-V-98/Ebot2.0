@@ -11,7 +11,7 @@ export default function SimulatorPage() {
     {
       id: 'init',
       role: 'bot',
-      text: 'Hi there! This is your AI Sandbox. Type a message below to test how the AI responds to your customers currently.',
+      text: 'System Online. This is your E BOT 2.0 Intelligence Sandbox. All responses generated here accurately reflect your live AI sales agent.',
       time: new Date().toISOString()
     }
   ]);
@@ -80,11 +80,17 @@ export default function SimulatorPage() {
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col space-y-6 animate-slide-up pb-6">
       <div className="flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">AI Node Simulator</h1>
-          <p className="text-slate-500 text-xs font-black uppercase tracking-widest flex items-center gap-2">
-             Test Mode For: {business?.name || 'Your Business'}
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">Intelligence Simulator</h1>
+            <p className="text-slate-500 text-xs font-black uppercase tracking-widest flex items-center gap-2">
+               Enterprise Control Environment • {business?.name || 'Aarya Bathware'}
+            </p>
+          </div>
+          <div className="hidden sm:flex bg-blue-600 text-white px-4 py-2 rounded-2xl items-center gap-2 shadow-lg shadow-blue-500/20">
+             <Zap size={14} className="animate-pulse" />
+             <span className="text-[10px] font-black tracking-widest uppercase">E BOT 2.0</span>
+          </div>
         </div>
         <button onClick={handleReset} className="p-3 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 rounded-2xl shadow-sm transition-all active:scale-95">
            <RefreshCcw size={18} />

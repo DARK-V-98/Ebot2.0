@@ -1,152 +1,121 @@
 import { db } from '../firebase/firebaseAdmin';
-import { getProduct } from './productService';
 
-export async function createOrder({ businessId, customerId, productId, quantity = 1, address = null, notes = null }: any) {
-  const product = await getProduct(businessId, productId);
-  if (!product) throw new Error('Product not found');
+export interface Order {
+  id: string;
+  userId: string;
+  status: 'Pending Payment' | 'Processing' | 'Shipped' | 'Completed' | 'Cancelled';
+  totalAmount: number;
+  paymentMethod: 'Bank Transfer' | 'Cash on Delivery';
+  shippingAddress: {
+    name: string;
+    phone: string;
+    email: string;
+    addressLine1: string;
+    city: string;
+    postalCode: string;
+  };
+  items: Array<{
+    productId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    imageUrl: string;
+  }>;
+  createdAt: any;
+  updatedAt?: any;
+}
 
-  const totalPrice = parseFloat(product.price || 0) * quantity;
-  const now = new Date().toISOString();
-
+export async function createOrder(data: Partial<Order>) {
+  const now = new Date();
   const docRef = await db.collection('orders').add({
-    business_id: businessId,
-    customer_id: customerId,
-    product_id: productId,
-    quantity,
-    total_price: totalPrice,
-    status: 'pending',
-    address,
-    notes,
-    created_at: now,
-    updated_at: now
+    ...data,
+    status: data.status || 'Pending Payment',
+    createdAt: now,
+    updatedAt: now
   });
 
-  return getOrder(businessId, docRef.id);
+  return getOrder('', docRef.id);
 }
 
 export async function getOrder(businessId: string, orderId: string) {
   const doc = await db.collection('orders').doc(orderId).get();
   if (!doc.exists) return null;
-  const order = doc.data() as any;
-  if (order.business_id !== businessId) return null;
-
-  const [cDoc, product] = await Promise.all([
-    db.collection('customers').doc(order.customer_id).get(),
-    getProduct(businessId, order.product_id)
-  ]);
-
-  const customer = cDoc.data() || {};
-  const p = product || {};
-
-  return {
-    id: doc.id,
-    ...order,
-    customer_phone: customer.phone,
-    customer_name: customer.name,
-    customer_language: customer.language,
-    product_name: p.name || 'Unknown Product',
-    product_price: p.price || 0,
-    product_image: p.image_url || null,
-    product_category: p.category || 'General',
-  };
+  return { id: doc.id, ...doc.data() } as Order;
 }
 
 export async function listOrders(businessId: string, { page = 1, limit = 20, status = '', search = '' } = {}) {
-  let query: any = db.collection('orders').where('business_id', '==', businessId);
-  const totalSnap = await query.get();
-  const totalCount = totalSnap.size;
+  let query: any = db.collection('orders');
 
   if (status) {
     query = query.where('status', '==', status);
   }
 
-  // Fetch without orderBy to avoid index requirement, sort in memory
   const snapshot = await query.get();
-  
-  let ordersList = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+  let ordersList = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) as Order[];
 
-  // Sort in memory by created_at desc
-  ordersList.sort((a: any, b: any) => {
-    const timeA = new Date(a.created_at || 0).getTime();
-    const timeB = new Date(b.created_at || 0).getTime();
+  // Sort desc by createdAt
+  ordersList.sort((a, b) => {
+    const timeA = a.createdAt?.toDate?.()?.getTime() || 0;
+    const timeB = b.createdAt?.toDate?.()?.getTime() || 0;
     return timeB - timeA;
   });
-  
-  const offset = (page - 1) * limit;
-  
-  const populated = await Promise.all(ordersList.map(async (o: any) => {
-    const [cDoc, pDoc] = await Promise.all([
-      db.collection('customers').doc(o.customer_id).get(),
-      db.collection('products').doc(o.product_id).get()
-    ]);
-    const customer = cDoc.data() || {};
-    const product = pDoc.data() || {};
-    
-    return {
-      ...o,
-      customer_phone: customer.phone,
-      customer_name: customer.name,
-      product_name: product.name,
-      product_image: product.image_url,
-      product_category: product.category,
-    };
-  }));
 
-  let filtered = populated;
   if (search) {
-    filtered = populated.filter((o: any) => 
-      (o.customer_phone || '').includes(search) ||
-      (o.customer_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (o.product_name || '').toLowerCase().includes(search.toLowerCase())
+    const s = search.toLowerCase();
+    ordersList = ordersList.filter((o: Order) => 
+      (o.shippingAddress?.name || '').toLowerCase().includes(s) ||
+      (o.shippingAddress?.phone || '').includes(s) ||
+      (o.items?.some(item => item.name.toLowerCase().includes(s)))
     );
   }
 
-  return { orders: filtered.slice(offset, offset + limit), total: totalCount, page, limit };
+  const total = ordersList.length;
+  const offset = (page - 1) * limit;
+  return { orders: ordersList.slice(offset, offset + limit), total, page, limit };
 }
 
 export async function updateOrderStatus(businessId: string, orderId: string, status: string) {
-  const doc = await db.collection('orders').doc(orderId).get();
-  if (!doc.exists || doc.data()?.business_id !== businessId) throw new Error('Order not found');
-
   await db.collection('orders').doc(orderId).update({
     status,
-    updated_at: new Date().toISOString()
+    updatedAt: new Date()
   });
 
   return getOrder(businessId, orderId);
 }
 
 export async function getOrderStats(businessId: string) {
-  const statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-  const results: any = {};
+  const snapshot = await db.collection('orders').get();
+  const orders = snapshot.docs.map(doc => doc.data() as Order);
 
-  for (const s of statuses) {
-    const snap = await db.collection('orders')
-      .where('business_id', '==', businessId)
-      .where('status', '==', s)
-      .count()
-      .get();
-    results[s] = snap.data().count;
-  }
+  const stats = {
+    pending: 0,
+    processing: 0,
+    shipped: 0,
+    completed: 0,
+    cancelled: 0,
+    total: orders.length,
+    revenue: 0,
+    today: 0
+  };
 
-  const ordersSnap = await db.collection('orders').where('business_id', '==', businessId).get();
-  let revenue = 0;
-  let totalCount = 0;
-  const todayStartStr = new Date();
-  todayStartStr.setHours(0, 0, 0, 0);
-  const todayIso = todayStartStr.toISOString();
-  let todayCount = 0;
+  const todayStr = new Date().toDateString();
 
-  ordersSnap.docs.forEach(doc => {
-    const d = doc.data();
-    totalCount++;
-    if (d.status !== 'cancelled') {
-      revenue += parseFloat(d.total_price) || 0;
+  orders.forEach(o => {
+    const status = (o.status || '').toLowerCase();
+    if (status.includes('pending')) stats.pending++;
+    else if (status.includes('processing')) stats.processing++;
+    else if (status.includes('shipped')) stats.shipped++;
+    else if (status.includes('completed')) stats.completed++;
+    else if (status.includes('cancelled')) stats.cancelled++;
+
+    if (status !== 'cancelled') {
+        stats.revenue += o.totalAmount || 0;
     }
-    if (d.created_at >= todayIso) {
-      todayCount++;
+
+    if (o.createdAt?.toDate?.()?.toDateString() === todayStr) {
+        stats.today++;
     }
   });
 
-  return { ...results, total: totalCount, revenue, today: todayCount };
+  return stats;
 }

@@ -13,42 +13,49 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 require('dotenv').config({ path: '.env.local' });
 
-const WALLET_AUTH_DIR = 'auth_info_baileys';
-const SERVICE_ACCOUNT_FILE = './eduhubsl0-firebase-adminsdk-fbsvc-55642e63cb.json';
-const TARGET_EMAIL = 'tikfese@gmail.com'; 
-
 console.log("-----------------------------------------");
 console.log("🚀 E BOT 2.0 BOOT SEQUENCE STARTING...");
 console.log("   📸 Media Handler: ACTIVE");
 console.log("   📋 Interactive Buttons: ACTIVE");
-console.log("   🔔 Push Notifications: ACTIVE");
+console.log("   🔔 Status: ORCHESTRATED BY E BOT 2.0");
 console.log("-----------------------------------------");
 
+const WALLET_AUTH_DIR = 'auth_info_baileys';
+const TARGET_EMAIL = 'aarya2026@gmail.com'; 
+
 if (!admin.apps.length) {
-  let serviceAccount;
+  let cert;
   const envKey = process.env.FIREBASE_SERVICE_ACCOUNT;
 
   if (envKey && envKey.length > 10) {
     console.log("☁️  DETECTED: FIREBASE_SERVICE_ACCOUNT variable found!");
     try {
-      serviceAccount = JSON.parse(envKey);
-      console.log("✅ SUCCESS: Environment Variable parsed as valid JSON.");
+      cert = admin.credential.cert(JSON.parse(envKey));
     } catch (e) {
-      console.error("❌ ERROR: Your FIREBASE_SERVICE_ACCOUNT variable in Railway is NOT valid JSON.");
-      console.error("Make sure it starts with { and ends with } and has no extra text.");
+      console.error("❌ ERROR: Your FIREBASE_SERVICE_ACCOUNT variable is NOT valid JSON.");
       process.exit(1);
     }
-  } else if (fs.existsSync(SERVICE_ACCOUNT_FILE)) {
-    console.log("📁 DETECTED: Local JSON file found.");
-    serviceAccount = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_FILE, 'utf8'));
+  } else if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+    console.log("🧩 DETECTED: Individual Firebase variables found.");
+    
+    // Advanced Key Sanitizer to fix DECODER UNKNOWN errors
+    let pk = process.env.FIREBASE_PRIVATE_KEY.trim();
+    if (pk.startsWith('"') && pk.endsWith('"')) pk = pk.slice(1, -1); // Remove wrapper quotes
+    pk = pk.replace(/\\n/g, '\n'); // Convert literal \n to real newlines
+    
+    cert = admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: pk
+    });
   }
 
-  if (serviceAccount) {
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  if (cert) {
+    admin.initializeApp({ credential: cert });
     console.log("✅ SUCCESS: Firebase Admin Initialized.");
   } else {
     console.error("❌ CRITICAL ERROR: NO CREDENTIALS FOUND!");
-    console.error("Checked for Environment Variable 'FIREBASE_SERVICE_ACCOUNT' and File '" + SERVICE_ACCOUNT_FILE + "'. Both are missing.");
+    console.error("Please add FIREBASE_PRIVATE_KEY and FIREBASE_CLIENT_EMAIL to .env.local");
     process.exit(1);
   }
 }
@@ -124,6 +131,19 @@ async function downloadMediaAsBase64(msg, mediaInfo) {
   }
 }
 
+/**
+ * Download an image from URL and return as Buffer
+ */
+async function downloadImage(url) {
+  try {
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    return Buffer.from(response.data, 'binary');
+  } catch (err) {
+    console.error(`❌ Download failed for ${url}:`, err.message);
+    return null;
+  }
+}
+
 async function processQueuedMessages(jid, pushName) {
     const queue = messageQueues[jid];
     if (!queue || queue.messages.length === 0) return;
@@ -151,17 +171,32 @@ async function processQueuedMessages(jid, pushName) {
       try {
         console.log(`📡 Sending to: ${url}/api/simulator`);
         const response = await axios.post(`${url}/api/simulator`, payload, { headers, timeout: 60000 });
-        const { reply, products, replyButtons, interactiveType } = response.data;
+        const { reply, products, replyButtons, interactiveType, welcomeReply } = response.data;
+
+        if (welcomeReply) {
+          console.log(`👋 Sending Welcome: ${welcomeReply.substring(0, 30)}...`);
+          await sock.sendMessage(jid, { text: welcomeReply });
+          // Short delay for better UX
+          await new Promise(res => setTimeout(res, 1500));
+        }
 
         if (reply) {
           console.log(`🤖 AI Reply: ${reply.substring(0, 50)}...`);
           
-          if (interactiveType === 'image' && products && products.length > 0 && products[0].image_url) {
-            console.log('🖼️  Sending Image Message via Baileys...');
-            await sock.sendMessage(jid, {
-              image: { url: products[0].image_url },
-              caption: reply
-            });
+          if (interactiveType === 'image' && products && products.length > 0 && (products[0].image_url || products[0].imageUrl)) {
+            const imgUrl = products[0].image_url || products[0].imageUrl;
+            console.log('🖼️  Downloading & Sending Image via Baileys...');
+            const imgBuffer = await downloadImage(imgUrl);
+            
+            if (imgBuffer) {
+              await sock.sendMessage(jid, {
+                image: imgBuffer,
+                caption: reply
+              });
+            } else {
+              // Fallback to text if image fails
+              await sock.sendMessage(jid, { text: reply });
+            }
             // Send buttons as a quick follow-up if applicable
             if (replyButtons && replyButtons.length > 0) {
               try {
@@ -174,7 +209,7 @@ async function processQueuedMessages(jid, pushName) {
             const rows = products.slice(0, 10).map(p => ({
               title: p.name.substring(0, 24),
               rowId: `prod_${p.id}`,
-              description: `Rs. ${p.price} | ${p.category || 'Hardware'}`.substring(0, 72)
+              description: `Rs. ${p.price} | ${p.category || 'Bathware'}`.substring(0, 72)
             }));
 
             await sock.sendMessage(jid, {

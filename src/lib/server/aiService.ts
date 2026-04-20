@@ -24,7 +24,7 @@ Message: "${messageText.replace(/"/g, "'")}"
 Return JSON in this exact format:
 {
   "language": "english" | "sinhala" | "singlish" | "tamil",
-  "intent": "greeting" | "search_product" | "place_order" | "check_order" | "location" | "help" | "cancel" | "handover" | "unknown",
+  "intent": "greeting" | "search_product" | "location" | "help" | "cancel" | "handover" | "unknown",
   "translation": "Literal English translation of the user's message",
   "extracted_keywords": ["keyword1", "keyword2"],
   "confidence": 0.0-1.0
@@ -39,7 +39,8 @@ Rules:
 - "translation" = ALWAYS provide a clear English translation of the customer's message.
 - "location" = customer asking for address, map, or shop location.
 - "extracted_keywords" = 🎯 CRITICAL: Extract ONLY product nouns (e.g. "sink", "faucet", "paint"). NEVER extract verbs like "buy", "show", or generic words like "price". If no specific product is mentioned, return an empty array [].
-- Detect intent from context: product mentions = search_product, buy/order/ganna = place_order
+- Detect intent from context: product mentions = search_product, help/info = help.
+- 🚫 IMPORTANT: "place_order" intent is NO LONGER SUPPORTED. If a customer says they want to buy or "ganna", classify it as "search_product" or "unknown" and let the reply generator handle the redirect.
 `;
 
   // Try Gemini models first
@@ -59,30 +60,30 @@ Rules:
   return { language: 'unknown', intent: 'unknown', extracted_keywords: [], confidence: 0 };
 }
 
-export async function generateReply({ userMessage, language, intent, businessName, products, sessionContext, history }: any) {
+export async function generateReply({ userMessage, language, intent, businessName, products, categories, sessionContext, history }: any) {
   const geminiModels = [
     'models/gemini-2.5-flash',
     'models/gemini-2.5-pro',
-    'models/gemini-3.1-pro-preview',
-    'models/gemini-flash-latest',
-    'models/gemini-pro-latest'
+    'models/gemini-1.5-flash-latest',
+    'models/gemini-1.5-pro-latest'
   ];
 
   // SMART FILTERING: Only show full details for relevant products (max 10)
-  // Otherwise, just show a summary of categories to save tokens
   let productContextText = 'No products found.';
   
   if (products && products.length > 0) {
     const topProducts = products.slice(0, 10);
-    productContextText = topProducts.map((p: any, idx: number) => `[Item ${idx + 1}] ${p.name} - Rs.${p.price}`).join('\n');
+    productContextText = topProducts.map((p: any, idx: number) => `[Item ${idx + 1}] ${p.name} - ${p.category} - Rs.${p.price}`).join('\n');
     
     if (products.length > 10) {
       productContextText += `\n...and ${products.length - 10} more items in stock.`;
     }
-  } else {
-    // If no specific products are found, provide a list of categories as a guide
-    productContextText = "We have items in various categories. Please ask for a specific item to see details.";
   }
+
+  // Include categories for context if no products are specifically requested
+  const categoryContextText = categories && categories.length > 0 
+    ? `Available Categories: ${categories.join(', ')}`
+    : '';
 
   const historyText = history && history.length
     ? history.slice(-6).map((m: any) => `${m.direction === 'in' ? 'Customer' : 'Bot'}: ${m.message}`).join('\n')
@@ -107,12 +108,16 @@ IMPORTANT IDENTITY RULES:
 3. CREATE URGENCY (FOMO): If an item has low stock, mention it to create urgency!
 4. SMART PRICING: Always include prices (Rs.) naturally when discussing items.
 
-ADDRESS & LOCATION (Golden Rule):
-ONLY provide the address if they explicitly ask for it! Never spam the address.
-Address: 80 Polgasowita Rd, Kottawa. Map: https://maps.app.goo.gl/cckESsCgnYfe5jf77
+🔥 REDIRECTION POLICY (STRICT):
+1. NO ORDERS IN BOT: You CANNOT take orders or ask for delivery addresses. 
+2. CALL TO ACTION: If a customer decides to buy, you MUST tell them to visit our website at "https://aaryabathware.com" or visit our physical shop in Kottawa.
+3. WE PROVIDE DETAILS: Your job is only to provide product info, photos, and guidance.
 
 Detected intent: ${intent}
 Session state: ${sessionContext?.state || 'idle'}
+
+Current Categories:
+${categoryContextText}
 
 Recent conversation:
 ${historyText}
@@ -123,8 +128,8 @@ ${productContextText}
 Customer's message: "${userMessage}"
 
 Respond naturally based on the intent:
-- search_product → Describe the found items enthusiastically. Mention prices, use the FOMO tactic if stock is low, and add a quick up-sell suggestion. Say "I'm sending the selection menu to you right now! 👇".
-- place_order → Excellent! They want to buy. Ask for their delivery address clearly.
+- search_product → Describe the items enthusiastically. Mention prices. Say "I'm sending the selection menu to you right now! 👇".
+- buying_interest → If they say "I want to buy", congratulate them on their choice and kindly explain that for security, all orders must be placed on our official website (aaryabathware.com) or at our shop in Kottawa.
 - unknown → Use your best judgment. Read between the lines. If they are asking for advice, act as a consultant.
 `;
 

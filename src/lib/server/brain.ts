@@ -8,17 +8,21 @@ import * as mediaService from './mediaService';
 import * as notificationService from './notificationService';
 import { db } from '../firebase/firebaseAdmin';
 
-export async function getSession(customerId: string) {
-  const docRef = db.collection('sessions').doc(customerId);
+const DEFAULT_BUSINESS_NAME = "Aarya Bathware";
+const DEFAULT_MAP_URL = "https://maps.app.goo.gl/cckESsCgnYfe5jf77";
+const DEFAULT_WEBSITE_URL = "https://aaryabathware.com";
+
+export async function getSession(userId: string) {
+  const docRef = db.collection('sessions').doc(userId);
   const doc = await docRef.get();
   
   if (doc.exists) {
     return { id: doc.id, ...doc.data() };
   }
 
-  const now = new Date().toISOString();
+  const now = new Date();
   await docRef.set({
-    customer_id: customerId,
+    userId: userId,
     state: 'idle',
     context_json: '{}',
     last_active: now
@@ -28,109 +32,60 @@ export async function getSession(customerId: string) {
   return { id: fresh.id, ...fresh.data() };
 }
 
-export async function updateSession(customerId: string, state: string, context = {}) {
-  await db.collection('sessions').doc(customerId).update({
+export async function updateSession(userId: string, state: string, context = {}) {
+  await db.collection('sessions').doc(userId).update({
     state,
     context_json: JSON.stringify(context),
-    last_active: new Date().toISOString()
+    last_active: new Date()
   });
 }
 
-/**
- * Process a media message from WhatsApp
- */
-export async function processMediaMessage({ businessId, businessName, phone, contactName, media, whatsappMsgId, isSimulation = false }: any) {
-  const customer: any = await userService.findOrCreateCustomer(businessId, phone, contactName);
+export async function processMediaMessage({ businessId, phone, contactName, media, whatsappMsgId, isSimulation = false }: any) {
+  const businessName = DEFAULT_BUSINESS_NAME;
+  const user: any = await userService.findOrCreateUserByPhone(phone, contactName);
   
-  // Analyze image with Gemini Vision if it's an image
   if (media.type === 'image' && media.base64) {
     try {
       media.transcription = await mediaService.analyzeImageWithVision(media.base64, media.mimetype || 'image/jpeg');
-      console.log(`[brain] 🖼️ Image analysis: ${media.transcription}`);
     } catch (err: any) {
-      console.error('[brain] Vision analysis failed:', err.message);
       media.transcription = 'Image received but analysis unavailable';
     }
   }
 
-  // Save the media message
-  const saved = await mediaService.saveMediaMessage({
+  await mediaService.saveMediaMessage({
     businessId,
-    customerId: customer.id,
+    customerId: user.id,
     media,
     direction: 'in',
     whatsappMsgId,
   });
 
-  // Create notification for media received
-  await notificationService.createNotification({
-    businessId,
-    type: 'media_received',
-    title: `${media.type.charAt(0).toUpperCase() + media.type.slice(1)} from ${contactName || phone}`,
-    body: media.transcription || `Received ${media.type} message`,
-    link: '/conversations',
-    customerId: customer.id,
-    customerName: contactName || phone,
-    metadata: { mediaType: media.type },
-  });
+  const session: any = await getSession(user.id);
+  if (session.state === 'handover') return null;
 
-  // Generate AI reply based on media context
-  const session: any = await getSession(customer.id);
-  
-  // If in handover mode, don't reply
-  if (session.state === 'handover') {
-    console.log(`[brain] Handover active for ${phone}. AI is silent for media.`);
-    return null;
-  }
-
-  const history = await messageService.getHistory(customer.id, 10);
-
-  // Build a text representation for the AI
-  let mediaContext = '';
-  switch (media.type) {
-    case 'image':
-      mediaContext = media.transcription 
-        ? `Customer sent an image. AI Vision analysis: "${media.transcription}". ${media.caption ? `Caption: "${media.caption}"` : ''}`
-        : `Customer sent an image. ${media.caption ? `Caption: "${media.caption}"` : 'No caption provided.'}`;
-      break;
-    case 'audio':
-      mediaContext = 'Customer sent a voice message. Voice transcription is not yet available. Please acknowledge and ask them to type their request.';
-      break;
-    case 'video':
-      mediaContext = `Customer sent a video. ${media.caption ? `Caption: "${media.caption}"` : 'Please acknowledge and ask how you can help.'}`;
-      break;
-    case 'document':
-      mediaContext = `Customer sent a document: "${media.filename || 'unknown file'}". Please acknowledge receipt.`;
-      break;
-    case 'sticker':
-      mediaContext = 'Customer sent a sticker (emoji reaction). Respond naturally to maintain conversation flow.';
-      break;
-    case 'location':
-      mediaContext = `Customer shared their location: Lat ${media.latitude}, Lon ${media.longitude}. This could be their delivery address or they want directions.`;
-      break;
-  }
+  const history = await messageService.getHistory(user.id, 10);
+  let mediaContext = `User sent a ${media.type}. `;
+  if (media.type === 'image') mediaContext += `Analysis: "${media.transcription}"`;
 
   const reply = await aiService.generateReply({
     userMessage: mediaContext,
-    language: customer.language || 'english',
-    intent: media.type === 'location' ? 'location' : 'unknown',
+    language: user.language || 'english',
+    intent: 'unknown',
     businessName,
     products: [],
     sessionContext: { state: session.state },
     history,
   });
 
-  // Save the bot reply
   await messageService.saveMessage({
     businessId,
-    customerId: customer.id,
+    customerId: user.id,
     message: reply,
     direction: 'out',
     intent: null,
-    language: customer.language || 'english',
+    language: user.language || 'english',
   });
 
-  // Send reply via WhatsApp
   if (!isSimulation) {
     await whatsappService.sendMessage(businessId, phone, reply);
   }
@@ -138,60 +93,38 @@ export async function processMediaMessage({ businessId, businessName, phone, con
   return { reply, products: [] };
 }
 
-export async function processMessage({ businessId, businessName, phone, contactName, messageText, whatsappMsgId, isSimulation = false }: any) {
-  const customer: any = await userService.findOrCreateCustomer(businessId, phone, contactName);
-  const session: any = await getSession(customer.id);
-  const context = session.context_json
-    ? (typeof session.context_json === 'string' ? JSON.parse(session.context_json) : session.context_json)
-    : {};
+export async function processMessage({ businessId, phone, contactName, messageText, whatsappMsgId, isSimulation = false }: any) {
+  const businessName = DEFAULT_BUSINESS_NAME;
+  const user: any = await userService.findOrCreateUserByPhone(phone, contactName);
+  const session: any = await getSession(user.id);
+  const context = session.context_json ? JSON.parse(session.context_json) : {};
 
   const textLower = messageText.toLowerCase().trim();
-  const greetings = ['hi', 'hello', 'hey', 'start', 'halo', 'hi ebot', 'hy'];
-  const thanksList = ['thanks', 'thank you', 'ok', 'okay', 'done', 'tq'];
-  const menuList = ['menu', 'products', 'items', 'catalog', 'buy', 'browse_products', 'browse_more'];
-  const locationList = ['location', 'address', 'shop', 'map', 'where are you', 'where'];
-  const contactList = ['human', 'agent', 'call', 'real person', 'help', 'customer service'];
-
-  let language = customer.language || 'english';
+  let language = user.language || 'english';
   let intent = 'unknown';
-  let extracted_keywords: string[] = [];
-  let translation = '';
   let skipAI = false;
 
-  // Numbered Selection Intercept (typing "1", "2" etc to select from buttons or products)
-  const numCheck = /^\d+$/.test(textLower) ? parseInt(textLower) : null;
-  if (numCheck && numCheck > 0) {
-    if (context.last_buttons?.length >= numCheck) {
-      messageText = context.last_buttons[numCheck - 1];
-      skipAI = true;
-      // Map common button IDs to intents for faster processing
-      if (messageText === 'browse_products' || messageText === 'browse_more') intent = 'browse_menu';
-      else if (messageText === 'check_orders' || messageText === 'check_order') intent = 'check_order';
-      else if (messageText === 'get_location') intent = 'location';
-      else if (messageText === 'talk_to_human') intent = 'handover';
-    } 
-    else if (context.last_products?.length >= numCheck) {
-      messageText = `prod_${context.last_products[numCheck - 1]}`;
-      skipAI = true;
-      intent = 'select_product';
-    }
-  }
-  // Pattern Matching to aggressively bypass Expensive AI
-  else if (greetings.includes(textLower)) {
+  // Manual Intercepts & Numeric Menu
+  if (['hi', 'hello', 'hey', 'start'].includes(textLower)) {
     intent = 'greeting';
     skipAI = true;
-  } else if (thanksList.includes(textLower)) {
-    intent = 'thanks';
+  } else if (textLower === '1' || ['menu', 'categories', 'browse'].includes(textLower)) {
+    intent = 'browse_menu';
     skipAI = true;
-  } else if (menuList.includes(textLower)) {
-    intent = 'browse_menu'; 
+  } else if (textLower === '2' || ['search', 'find', 'products'].includes(textLower)) {
+    intent = 'search_product';
     skipAI = true;
-    messageText = 'browse_products'; // Normalize to the button ID
-  } else if (locationList.includes(textLower)) {
-    intent = 'location';
+  } else if (textLower === '3' || ['location', 'address', 'where', 'map'].includes(textLower)) {
+    intent = 'location'; // Usually redirects to same as opening_times
     skipAI = true;
-  } else if (contactList.includes(textLower)) {
+  } else if (textLower === '4' || ['human', 'help', 'support', 'owner'].includes(textLower)) {
     intent = 'handover';
+    skipAI = true;
+  } else if (textLower === 'view_website') {
+    intent = 'view_website';
+    skipAI = true;
+  } else if (['times', 'opening', 'hours', 'open'].some(k => textLower.includes(k))) {
+    intent = 'opening_times';
     skipAI = true;
   }
 
@@ -199,464 +132,135 @@ export async function processMessage({ businessId, businessName, phone, contactN
     const aiResult = await aiService.detectLanguageAndIntent(messageText);
     language = aiResult.language;
     intent = aiResult.intent;
-    extracted_keywords = aiResult.extracted_keywords;
-    translation = aiResult.translation;
-
-    if (language !== 'unknown' && customer.language !== language) {
-      await userService.updateCustomerLanguage(customer.id, language);
-    }
   }
 
   await messageService.saveMessage({
     businessId,
-    customerId: customer.id,
+    customerId: user.id,
     message: messageText,
     direction: 'in',
     intent,
     language,
-    translation,
     whatsappMsgId,
   });
 
-  // --- HANDOVER CHECK ---
   if (session.state === 'handover' && intent !== 'cancel') {
-     console.log(`[brain] Handover active for ${phone}. AI is silent.`);
-     
-     // Notify business owner about new message during handover
-     await notificationService.createNotification({
-       businessId,
-       type: 'handover_request',
-       title: `Message from ${contactName || phone} (Handover)`,
-       body: messageText.substring(0, 100),
-       link: '/conversations',
-       customerId: customer.id,
-       customerName: contactName || phone,
-     });
-
-     return null; 
+    return null; 
   }
 
-  const history = await messageService.getHistory(customer.id, 10);
+  const history = await messageService.getHistory(user.id, 10);
+  const isFirstContact = history.length === 0;
 
-  let newState = session.state;
   let products: any[] = [];
-  // Tracks which interactive UI to send
-  let reply = '';
   let interactiveType: 'none' | 'reply_buttons' | 'list' | 'cta' | 'image' = 'none';
   let replyButtons: { id: string; title: string }[] = [];
   let ctaUrl = '';
   let ctaButtonText = '';
+  let reply = '';
+  let welcomeReply = '';
+
+  if (isFirstContact && intent !== 'greeting') {
+    welcomeReply = `👋 Hello! Welcome to ${businessName}. I'm Aarya, your AI assistant. ✨\n\nGive me a moment while I look that up for you... 🕵️‍♀️`;
+  }
+
+  const OPENING_TIMES = `🏪 Opening Hours:
+• Monday - Friday: 9:00 AM – 4:30 PM
+• Saturday: Open 24 hours 🕒
+• Sunday: 9:00 AM – 4:30 PM`;
 
   switch (intent) {
     case 'greeting':
-      newState = 'browsing';
-      context.last_intent = 'greeting';
-      // Send quick action buttons on greeting
+      reply = `👋 Welcome to ${businessName}! 🚿✨\n\nHow can I help you today? Please choose an option:\n\n1️⃣ Browse Categories 🛍️\n2️⃣ Search Product 🔍\n3️⃣ Location & Times 📍\n4️⃣ Human Support 👨‍💼\n\nYou can reply with the number or just tell me what you need!`;
       interactiveType = 'reply_buttons';
       replyButtons = [
-        { id: 'browse_products', title: '🛍️ Browse Products' },
-        { id: 'check_orders', title: '📦 My Orders' },
-        { id: 'get_location', title: '📍 Store Location' },
+        { id: 'browse_menu', title: '🛍️ Categories' },
+        { id: 'search', title: '🔍 Search Product' },
+        { id: 'opening_times', title: '📍 Location & Times' },
       ];
       break;
 
-    case 'thanks':
-      newState = session.state; // preserve state
-      interactiveType = 'none';
+    case 'opening_times':
+      reply = `${OPENING_TIMES}\n\n📍 Visit us at: ${DEFAULT_MAP_URL}`;
+      interactiveType = 'cta';
+      ctaUrl = DEFAULT_MAP_URL;
+      ctaButtonText = '📍 Google Maps';
       break;
 
     case 'search_product':
-      newState = 'browsing';
-      context.last_intent = 'search_product';
-      products = await productService.searchProducts(businessId, extracted_keywords, 5);
-      context.last_products = products.map((p: any) => p.id);
-      
+      const keywords = (await aiService.detectLanguageAndIntent(messageText)).extracted_keywords;
+      products = await productService.searchProducts(businessId, keywords, 5);
       if (products.length === 1 && products[0].image_url) {
         interactiveType = 'image';
-        context.pending_product_id = products[0].id;
-        // Optionally add follow-up buttons
         replyButtons = [
-          { id: 'buy_now', title: '🛒 Buy Now' },
-          { id: 'browse_more', title: '🛍️ Browse More' }
+             { id: 'view_website', title: '🌐 View on Website' },
+             { id: 'browse_menu', title: '🛍️ Browse More' }
         ];
       }
-      // If > 1 products, we deliberately leave interactiveType as 'none' 
-      // so the AI generates the rich text response showing Smart Links!
-      break;
-
-    case 'place_order': {
-      newState = 'ordering';
-      context.last_intent = 'place_order';
-
-      if (extracted_keywords.length) {
-        products = await productService.searchProducts(businessId, extracted_keywords, 3);
-      } else if (context.last_products?.length) {
-        for (const pid of context.last_products.slice(0, 3)) {
-          const p = await productService.getProduct(businessId, pid);
-          if (p) products.push(p);
-        }
-      }
-
-      if (products.length === 1 && context.address) {
-        try {
-          const order: any = await orderService.createOrder({
-            businessId,
-            customerId: customer.id,
-            productId:  products[0].id,
-            quantity:   context.quantity || 1,
-            address:    context.address,
-          });
-          context.last_order_id = order.id;
-          newState = 'idle';
-
-          // Notify about new order
-          await notificationService.createNotification({
-            businessId,
-            type: 'new_order',
-            title: `New Order from ${contactName || phone}`,
-            body: `${products[0].name} × ${context.quantity || 1} — Rs.${order.total_price}`,
-            link: '/orders',
-            customerId: customer.id,
-            customerName: contactName || phone,
-            metadata: { orderId: order.id },
-          });
-
-          // Send order confirmation buttons
-          interactiveType = 'reply_buttons';
-          replyButtons = [
-            { id: 'browse_more', title: '🛍️ Browse More' },
-            { id: 'check_order', title: '📦 Track Order' },
-          ];
-        } catch (err: any) {
-          console.error('[brain] Order creation error:', err.message);
-        }
-      } else if (products.length === 1) {
-        newState = 'awaiting_address';
-        context.pending_product_id = products[0].id;
-      }
-      break;
-    }
-
-    case 'cancel':
-      newState = 'idle';
-      context.pending_product_id = null;
-      context.cart = null;
-      // Send follow-up buttons
-      interactiveType = 'reply_buttons';
-      replyButtons = [
-        { id: 'browse_products', title: '🛍️ Browse Products' },
-        { id: 'talk_to_human', title: '👤 Talk to Human' },
-      ];
-      break;
-
-    case 'handover':
-      newState = 'handover';
-      context.last_intent = 'handover';
-      
-      // Critical notification for handover
-      await notificationService.createNotification({
-        businessId,
-        type: 'handover_request',
-        title: `🚨 ${contactName || phone} wants to talk to a human!`,
-        body: `Customer requested human assistance. Last message: "${messageText.substring(0, 80)}"`,
-        link: '/conversations',
-        customerId: customer.id,
-        customerName: contactName || phone,
-      });
-      break;
-
-    case 'help':
-      newState = session.state;
-      interactiveType = 'reply_buttons';
-      replyButtons = [
-        { id: 'browse_products', title: '🛍️ Browse Products' },
-        { id: 'check_orders', title: '📦 My Orders' },
-        { id: 'talk_to_human', title: '👤 Talk to Human' },
-      ];
       break;
 
     case 'location':
-      newState = session.state;
+      reply = `📍 Visit us at Aarya Bathware in Kottawa!\n\n${OPENING_TIMES}\n\nGoogle Maps: ${DEFAULT_MAP_URL}`;
       interactiveType = 'cta';
-      ctaUrl = 'https://maps.app.goo.gl/cckESsCgnYfe5jf77';
-      ctaButtonText = '📍 Open in Maps';
+      ctaUrl = DEFAULT_MAP_URL;
+      ctaButtonText = '📍 Google Maps';
       break;
 
-    default:
-      if (session.state === 'awaiting_address' && messageText.length > 5) {
-        context.address = messageText;
-        if (context.pending_product_id) {
-          try {
-            const order: any = await orderService.createOrder({
-              businessId,
-              customerId: customer.id,
-              productId:  context.pending_product_id,
-              quantity:   context.quantity || 1,
-              address:    context.address,
-            });
-            context.last_order_id = order.id;
-            context.pending_product_id = null;
-            newState = 'idle';
+    case 'view_website':
+      reply = `You can explore our full collection and prices on our official website:`;
+      interactiveType = 'cta';
+      ctaUrl = DEFAULT_WEBSITE_URL;
+      ctaButtonText = '🌐 Visit Website';
+      break;
 
-            // Notify about new order
-            await notificationService.createNotification({
-              businessId,
-              type: 'new_order',
-              title: `New Order from ${contactName || phone}`,
-              body: `Order #${order.id} placed via WhatsApp`,
-              link: '/orders',
-              customerId: customer.id,
-              customerName: contactName || phone,
-              metadata: { orderId: order.id },
-            });
-
-            interactiveType = 'reply_buttons';
-            replyButtons = [
-              { id: 'browse_more', title: '🛍️ Browse More' },
-              { id: 'check_order', title: '📦 Track Order' },
-            ];
-          } catch (err: any) {
-            console.error('[brain] Order creation error (address):', err.message);
-          }
-        }
-      }
-      else if (messageText.startsWith('prod_catlink_')) {
-        newState = 'browsing';
-        const catName = messageText.replace('prod_catlink_', '').trim();
-        const res = await productService.listProducts(businessId, { category: catName, limit: 15 });
-        products = res.products;
-        
-        if (products.length > 0) {
-          context.last_products = products.map(p => p.id);
-          const itemsText = products.map((p, i) => `${i + 1}️⃣ ${p.name} - Rs.${p.price}`).join('\n');
-          reply = `Here are the items in our *${catName}* collection! 🛍️\n\n${itemsText}\n\nReply with a number to see photos! 👇`;
-          interactiveType = 'none';
-        } else {
-          // Fallback if empty category
-          reply = `I'm sorry! We don't have any items in the *${catName}* collection at the moment. 😔`;
-          replyButtons = [{ id: 'browse_products', title: '🔙 Back to Menu' }];
-          interactiveType = 'reply_buttons';
-        }
-      }
-      // Handle product selection from catalog list
-      else if (messageText.startsWith('prod_')) {
-        const productId = messageText.replace('prod_', '');
-        const p = await productService.getProduct(businessId, productId);
-        if (p) {
-          products = [p];
-          context.last_products = [p.id];
-          context.pending_product_id = p.id;
-          if (p.image_url) {
-            interactiveType = 'image';
-          }
-          // Optionally add follow-up buttons
-          replyButtons = [
-            { id: 'buy_now', title: '🛒 Buy Now' },
-            { id: 'browse_more', title: '🛍️ Browse More' }
-          ];
-        }
-      }
-      else if (messageText === 'browse_products' || messageText === 'browse_more') {
-        newState = 'browsing';
-        const rawCategories = await productService.getCategories(businessId);
-        
-        products = rawCategories.slice(0, 30).map((c: any) => ({
-           id: `catlink_${c}`,
-           name: `📁 ${c}`,
-           price: 'Select to view items',
-           category: 'Category Collection'
-        }));
-        
-        if (products.length > 0) {
-          context.last_products = products.map((p: any) => p.id);
-        }
-      }
-      else if (messageText === 'check_orders' || messageText === 'check_order') {
-        context.last_intent = 'check_order';
-      }
-      else if (messageText === 'get_location') {
-        interactiveType = 'cta';
-        ctaUrl = 'https://maps.app.goo.gl/cckESsCgnYfe5jf77';
-        ctaButtonText = '📍 Open in Maps';
-      }
-      else if (messageText === 'buy_now') {
-        if (context.pending_product_id) {
-          newState = 'awaiting_address';
-          context.last_intent = 'place_order';
-        } else {
-          // Send them to browse if they clicked buy but lost context
-          newState = 'browsing';
-          products = await productService.searchProducts(businessId, [], 10);
-          if (products.length > 0) interactiveType = 'list';
-        }
-      }
-      else if (messageText === 'talk_to_human') {
-        newState = 'handover';
-        context.last_intent = 'handover';
-        await notificationService.createNotification({
-          businessId,
-          type: 'handover_request',
-          title: `🚨 ${contactName || phone} wants to talk to a human!`,
-          body: `Customer clicked "Talk to Human" button`,
-          link: '/conversations',
-          customerId: customer.id,
-          customerName: contactName || phone,
-        });
-      }
+    case 'handover':
+      reply = `I'll connect you with a human agent. Please wait a moment... 👨‍💼`;
+      await updateSession(user.id, 'handover', context);
+      await notificationService.createNotification({
+        businessId,
+        type: 'handover_request',
+        title: `🚨 ${contactName || phone} requested support`,
+        body: `Customer needs human assistance.`,
+        link: '/conversations',
+        customerId: user.id,
+        customerName: contactName || phone,
+      });
+      break;
+      
+    case 'browse_menu':
+      reply = "I can show you our top categories. Which one would you like to see?";
+      const cats = await productService.getCategories(businessId);
+      // Simplify: just show top categories
       break;
   }
 
-  // Sync replyButtons to session context for numbered selection
-  if (replyButtons.length > 0) {
-     context.last_buttons = replyButtons.map(b => b.id);
-  } else if (interactiveType === 'none' && intent !== 'select_product') {
-     // Clear buttons if we're moving to a state without buttons, unless we just selected one
-     context.last_buttons = [];
-  }
-  
-  await updateSession(customer.id, newState, context);
+  const categories = await productService.getCategories(businessId);
 
-  if (skipAI) {
-    if (intent === 'greeting') {
-      const greetingsList = [
-        `Hello! 🌟 Welcome to ${businessName}. How can I help you today?`,
-        `Hi there! 👋 Welcome to ${businessName}. Looking for anything specific?`,
-        `Greetings! 😊 Welcome to ${businessName}. What can I do for you today?`,
-        `Hey! ✨ Thank you for contacting ${businessName}. How may I assist you?`
-      ];
-      reply = greetingsList[Math.floor(Math.random() * greetingsList.length)];
-    } else if (intent === 'thanks') {
-      const thanksReplies = [
-        `You're welcome! Let me know if you need anything else. 😊`,
-        `Happy to help! Reach out anytime. 👍`,
-        `Anytime! Have a great day. 🌟`
-      ];
-      reply = thanksReplies[Math.floor(Math.random() * thanksReplies.length)];
-    } else if (intent === 'location') {
-      reply = `We'd love to see you! We are located at 80 Polgasowita Rd, Kottawa. Click the map link below for directions. 📍`;
-    } else if (intent === 'handover') {
-      reply = `No problem. I have notified our human agents. Someone will be with you shortly! 👨‍💼`;
-    } else if (intent === 'browse_menu') {
-      const itemsList = products.map((c: any, i: number) => `${i + 1}️⃣ ${c.name.replace('📁 ', '')}`).join('\n');
-      reply = `I'd be happy to show you what we have! Please reply with the number of the category below: 👇\n\n${itemsList}`;
-    } else if (intent === 'select_product') {
-      // reply is already populated inside the switch/if-else blocks for prod_ and prod_catlink_
-      if (!reply) {
-         reply = "I've selected that item for you! What would you like to do next?";
-      }
-    }
-  } else {
+  if (!reply) {
     reply = await aiService.generateReply({
-      userMessage:     messageText,
-      language:        language !== 'unknown' ? language : (customer.language || 'english'),
+      userMessage: messageText,
+      language: language,
       intent,
       businessName,
       products,
-      sessionContext:  { state: newState, ...context },
-      history:         history.slice(-4), // Context Shrinking: passing only last 4 messages instead of 10
+      categories,
+      sessionContext: { state: session.state, ...context },
+      history: history.slice(-5),
     });
-  }
-
-  // --- APPEND NUMBERED MENU FOR WHATSAPP ---
-  // If not a simulation, we append the options as text so the user can type the number.
-  if (!isSimulation) {
-    if (replyButtons.length > 0) {
-      const menuText = replyButtons.map((b, i) => `${i + 1}️⃣ ${b.title}`).join('\n');
-      if (!reply.includes(menuText)) {
-        reply += `\n\n${menuText}`;
-      }
-    } else if (interactiveType === 'list' && products.length > 0) {
-      const itemsText = products.slice(0, 10).map((p, i) => `${i + 1}️⃣ ${p.name} - Rs.${p.price}`).join('\n');
-      if (!reply.includes(itemsText)) {
-        reply += `\n\n${itemsText}`;
-      }
-    }
   }
 
   await messageService.saveMessage({
     businessId,
-    customerId: customer.id,
-    message:    reply,
-    direction:  'out',
-    intent:     null,
-    language:   language !== 'unknown' ? language : customer.language,
+    customerId: user.id,
+    message: reply,
+    direction: 'out',
+    intent: null,
+    language,
   });
 
-  // --- SEND REPLY WITH INTERACTIVE ELEMENTS ---
   if (!isSimulation) {
-    switch (interactiveType) {
-      case 'reply_buttons':
-        // Send text reply first, then buttons
-        try {
-          await whatsappService.sendReplyButtons(
-            businessId, phone, reply,
-            replyButtons,
-            businessName
-          );
-        } catch (err) {
-          // Fallback to plain text if buttons fail
-          console.warn('[brain] Reply buttons failed, falling back to text');
-          await whatsappService.sendMessage(businessId, phone, reply);
-        }
-        break;
-
-      case 'list':
-        if (products.length > 0) {
-          const rows = products.slice(0, 10).map((p: any) => ({
-            id: `prod_${p.id}`,
-            title: p.name.substring(0, 24),
-            description: `Rs.${p.price} | ${p.category || ''}`.substring(0, 72)
-          }));
-
-          await whatsappService.sendListMessage(
-            businessId, 
-            phone, 
-            reply,
-            'Select Items', 
-            [{ title: 'Available Catalog', rows }]
-          );
-        } else {
-          await whatsappService.sendMessage(businessId, phone, reply);
-        }
-        break;
-
-      case 'cta':
-        try {
-          await whatsappService.sendCTAButton(
-            businessId, phone, reply,
-            ctaButtonText, ctaUrl
-          );
-        } catch (err) {
-          await whatsappService.sendMessage(businessId, phone, reply);
-        }
-        break;
-
-      case 'image':
-        try {
-          const product = products[0];
-          // We can set the AI generated reply as the caption for the image message
-          await whatsappService.sendImageMessage(
-            businessId, phone, product.image_url, reply
-          );
-          
-          // If we also prepared replyButtons (like Buy Now), send them right after the image
-          if (replyButtons.length > 0) {
-            await whatsappService.sendReplyButtons(
-              businessId, phone, "Would you like to proceed?",
-              replyButtons,
-              businessName
-            );
-          }
-        } catch (err) {
-          await whatsappService.sendMessage(businessId, phone, reply);
-        }
-        break;
-
-      default:
-        await whatsappService.sendMessage(businessId, phone, reply);
-        break;
-    }
+    await whatsappService.sendMessage(businessId, phone, reply);
+    // Note: Send interactive elements here if implemented
   }
 
-  return { reply, products, interactiveType, replyButtons };
+  return { reply, products, interactiveType, replyButtons, welcomeReply };
 }

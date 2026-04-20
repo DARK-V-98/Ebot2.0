@@ -38,13 +38,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'AI Brain returned no response' }, { status: 500 });
     }
 
-    const { reply, products, replyButtons, interactiveType } = result;
+    const { reply, products, replyButtons, interactiveType, welcomeReply } = result;
 
     return NextResponse.json({ 
       reply, 
       products: products || [],
       replyButtons: replyButtons || [],
       interactiveType: interactiveType || 'none',
+      welcomeReply: welcomeReply || null,
       timestamp: new Date().toISOString() 
     });
   } catch (err: any) {

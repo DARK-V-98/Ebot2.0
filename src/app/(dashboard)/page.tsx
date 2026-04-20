@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   MessageSquare, ShoppingCart, Users, TrendingUp,
-  ArrowUpRight, Clock, CheckCircle2, Package, Zap, Bot, Activity
+  ArrowUpRight, Clock, CheckCircle2, Package, Zap, Bot, Activity, Box
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -15,50 +15,44 @@ import { getDashboardStats, getDashboardInsights } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import clsx from 'clsx';
 
-const COLORS = ['#eab308', '#3b82f6', '#22c55e', '#ef4444'];
+const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444'];
 
 function StatCard({ title, value, sub, icon: Icon, color, href }: any) {
   const colorMap: any = {
-    green:  { bg: 'bg-green-500/10',  icon: 'text-green-400',  ring: 'ring-green-500/20' },
-    blue:   { bg: 'bg-blue-500/10',   icon: 'text-blue-400',   ring: 'ring-blue-500/20'  },
-    purple: { bg: 'bg-purple-500/10', icon: 'text-purple-400', ring: 'ring-purple-500/20'},
-    yellow: { bg: 'bg-yellow-500/10', icon: 'text-yellow-400', ring: 'ring-yellow-500/20'},
+    green:  { bg: 'bg-emerald-50',  icon: 'text-emerald-600',  ring: 'ring-emerald-500/20' },
+    blue:   { bg: 'bg-blue-50',     icon: 'text-blue-600',     ring: 'ring-blue-500/20'    },
+    orange: { bg: 'bg-orange-50',   icon: 'text-orange-600',   ring: 'ring-orange-500/20'  },
+    purple: { bg: 'bg-purple-50',   icon: 'text-purple-600',   ring: 'ring-purple-500/20'  },
   };
-  const c = colorMap[color] || colorMap.green;
+  const c = colorMap[color] || colorMap.blue;
 
   const inner = (
     <motion.div 
-      whileHover={{ y: -4 }}
-      className="stat-card group cursor-pointer h-full"
+      whileHover={{ y: -4, boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' }}
+      className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm cursor-pointer h-full transition-all"
     >
       <div className="flex items-start justify-between">
-        <div className={`w-11 h-11 rounded-xl ${c.bg} ring-1 ${c.ring} flex items-center justify-center`}>
-          <Icon size={20} className={c.icon} />
+        <div className={`w-14 h-14 rounded-2xl ${c.bg} flex items-center justify-center`}>
+          <Icon size={24} className={c.icon} />
         </div>
-        <ArrowUpRight size={16} className="text-slate-600 group-hover:text-slate-400 transition-colors" />
+        <div className="bg-slate-50 p-2 rounded-xl text-slate-400 group-hover:text-blue-600 transition-colors">
+          <ArrowUpRight size={16} />
+        </div>
       </div>
-      <div className="mt-4">
-        <p className="text-slate-500 text-xs font-black uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-black text-slate-900 mt-2">
+      <div className="mt-6">
+        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">{title}</p>
+        <p className="text-3xl font-black text-slate-900 mt-1 tracking-tighter">
           {typeof value === 'number' ? value.toLocaleString() : value}
         </p>
-        {sub && <p className="text-xs text-slate-600 mt-1 font-bold">{sub}</p>}
+        {sub && <p className="text-xs text-slate-500 mt-2 font-bold flex items-center gap-1.5 capitaize">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {sub}
+        </p>}
       </div>
     </motion.div>
   );
 
   return href ? <Link href={href}>{inner}</Link> : inner;
 }
-
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="px-3 py-2 rounded-xl bg-[#1e2d4a] border border-white/10 shadow-card text-xs">
-      <p className="text-slate-400 mb-1">{label}</p>
-      <p className="text-brand-400 font-semibold">{payload[0]?.value} messages</p>
-    </div>
-  );
-};
 
 export default function DashboardPage() {
   const { business } = useAuth();
@@ -83,194 +77,149 @@ export default function DashboardPage() {
   const pieData = data && data.orders
     ? [
         { name: 'Pending',   value: data.orders.pending   },
-        { name: 'Confirmed', value: data.orders.confirmed },
-        { name: 'Delivered', value: data.orders.delivered },
-        { name: 'Cancelled', value: data.orders.cancelled },
+        { name: 'Processing', value: data.orders.processing },
+        { name: 'Shipped',   value: data.orders.shipped   },
+        { name: 'Completed', value: data.orders.completed },
       ].filter(d => d.value > 0)
-    : [];
-
-  const orderStatusData = data && data.orders
-    ? [
-        { label: 'Pending',   count: data.orders.pending,   color: 'text-yellow-400' },
-        { label: 'Confirmed', count: data.orders.confirmed, color: 'text-blue-400'   },
-        { label: 'Delivered', count: data.orders.delivered, color: 'text-green-400'  },
-        { label: 'Cancelled', count: data.orders.cancelled, color: 'text-red-400'    },
-      ]
     : [];
 
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-8 pb-10"
+      className="space-y-10 pb-20"
     >
-      {/* AI Header Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-            <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">
-              System <span className="text-red-600">Command Center</span>
-            </h1>
-            <p className="text-slate-600 text-xs mt-2 font-black uppercase tracking-widest flex items-center gap-2">
-              <Activity size={14} className="text-blue-600" />
-              Monitoring {business?.name} — {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+           <div className="badge-blue mb-4 inline-flex items-center gap-2 px-4 py-1.5">
+              <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-700">Retail Operations Engine</span>
+           </div>
+           <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase leading-[0.9]">
+             Aarya <span className="text-blue-600">Bathware</span>
+           </h1>
+           <p className="text-slate-500 text-xs mt-4 font-bold uppercase tracking-widest flex items-center gap-2">
+             <Activity size={14} className="text-blue-600" />
+             Active Terminal — {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+           </p>
         </div>
         
-        {/* AI Insight Pill */}
-        <AnimatePresence mode="wait">
-          {insights && !loadingInsights && (
-            <motion.div 
-              key="insight-pill"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-brand-500/10 border border-brand-500/20 rounded-2xl p-4 flex items-center gap-3 relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 px-3 py-1 bg-blue-600 rounded-bl-xl shadow-lg border-l border-b border-blue-700">
-                <p className="text-[9px] font-black text-white uppercase tracking-widest">LIVE AI</p>
+        <div className="flex items-center gap-3">
+           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 flex items-center gap-4 shadow-2xl relative overflow-hidden group">
+              <div className="absolute inset-0 bg-blue-600/5 group-hover:bg-blue-600/10 transition-colors" />
+              <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 relative z-10">
+                 <Bot size={20} className="text-white" />
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0 border border-blue-100 shadow-sm">
-                <Bot size={24} className="text-blue-600" />
+              <div className="relative z-10">
+                 <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest leading-none mb-1.5 flex items-center gap-1.5">
+                    <Zap size={10} className="animate-pulse" /> E BOT 2.0 ENGINE
+                 </p>
+                 <p className="text-sm font-black text-white uppercase tracking-tighter">AI AGENT: ACTIVE</p>
               </div>
-              <p className="text-sm text-slate-700 leading-tight font-medium pr-10">
-                <span className="font-black text-blue-600 uppercase tracking-tighter mr-1">Insight:</span> {insights.insights[0].text}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+           </div>
+        </div>
       </div>
 
-      {/* Main Stat Matrix */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* Stats Matrix */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-[140px] rounded-2xl" />)
+          Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-[200px] rounded-[40px]" />)
         ) : (
           <>
-            <StatCard title="Messages" value={data?.messages?.total ?? 0} sub={`${data?.messages?.today ?? 0} today`} icon={MessageSquare} color="green" href="/conversations" />
-            <StatCard title="Sales" value={`Rs. ${(data?.orders?.revenue ?? 0).toLocaleString()}`} sub={`${data?.orders?.total ?? 0} orders total`} icon={ShoppingCart} color="blue" href="/orders" />
-            <StatCard title="Customers" value={data?.total_customers ?? 0} sub="Lifetime reach" icon={Users} color="purple" href="/customers" />
-            <StatCard title="Active Brain" value={data?.active_users ?? 0} sub="Users this week" icon={Zap} color="yellow" />
+            <StatCard title="Daily Traffic" value={data?.messages?.today ?? 0} sub="Real-time queries" icon={MessageSquare} color="blue" href="/conversations" />
+            <StatCard title="Gross Revenue" value={`Rs. ${(data?.orders?.revenue ?? 0).toLocaleString()}`} sub="Current cycle" icon={ShoppingCart} color="green" href="/orders" />
+            <StatCard title="Aarya Partners" value={data?.total_customers ?? 0} sub="Registered users" icon={Users} color="purple" href="/customers" />
+            <StatCard title="Inventory Stack" value={data?.total_products ?? 0} sub="Active SKU count" icon={Box} color="orange" href="/products" />
           </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Advanced Activity Chart */}
-        <div className="card p-6 xl:col-span-2 relative overflow-hidden">
-          <div className="flex items-center justify-between mb-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Activity Chart */}
+        <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm xl:col-span-2 relative overflow-hidden">
+          <div className="flex items-center justify-between mb-10">
             <div>
-              <h2 className="text-slate-900 font-black text-xl tracking-tight">Sales & Messages</h2>
-              <p className="text-slate-500 text-xs mt-1 font-bold">Activity overview across the last 7 days</p>
+              <h2 className="text-slate-900 font-extrabold text-2xl tracking-tight uppercase italic">Engagement Telemetry</h2>
+              <p className="text-slate-400 text-[10px] mt-1 font-black uppercase tracking-widest">7-Day Interaction Density</p>
+            </div>
+            <div className="flex items-center gap-2">
+               <div className="w-3 h-3 rounded bg-blue-600" />
+               <span className="text-[10px] font-black uppercase text-slate-500">Node Activity</span>
             </div>
           </div>
           
           {isLoading ? (
-            <div className="skeleton h-64 rounded-xl" />
-          ) : chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
+            <div className="skeleton h-64 rounded-[40px]" />
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorMsg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                    <stop offset="5%"  stopColor="#2563eb" stopOpacity={0.6}/>
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-                <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="messages" stroke="#22c55e" strokeWidth={3} fillOpacity={1} fill="url(#colorMsg)" dot={{ r: 4, fill: '#22c55e', strokeWidth: 2, stroke: '#0a0e1a' }} activeDot={{ r: 6, strokeWidth: 0 }} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 800 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 800 }} axisLine={false} tickLine={false} />
+                <Tooltip />
+                <Area type="monotone" dataKey="messages" stroke="#2563eb" strokeWidth={4} fillOpacity={1} fill="url(#colorMsg)" dot={{ r: 6, fill: '#2563eb', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8, strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
-          ) : (
-             <div className="h-64 flex flex-col items-center justify-center text-slate-600 gap-3">
-                <Bot size={40} className="text-slate-700 opacity-20" />
-                <p className="text-sm">Link WhatsApp to enable telemetry visualization</p>
-             </div>
           )}
         </div>
 
-        {/* Advanced Distribution Analysis */}
-        <div className="card p-6 flex flex-col">
-          <div className="mb-8">
-            <h2 className="text-slate-900 font-black text-xl tracking-tight">Order Stages</h2>
-            <p className="text-slate-500 text-xs mt-1 font-bold">Current customer pipeline status</p>
+        {/* Order Distribution */}
+        <div className="bg-slate-900 p-8 rounded-[40px] shadow-2xl flex flex-col relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-[80px]" />
+          
+          <div className="mb-10 relative z-10">
+            <h2 className="text-white font-extrabold text-2xl tracking-tight uppercase italic">Order Pipeline</h2>
+            <p className="text-blue-400 text-[10px] mt-1 font-black uppercase tracking-widest tracking-[0.2em]">Fulfillment Distribution</p>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center">
-             {isLoading ? (
-                <div className="w-40 h-40 rounded-full border-4 border-white/5 animate-spin border-t-brand-500" />
-             ) : pieData.length > 0 ? (
-               <div className="relative w-full h-[200px]">
+          <div className="flex-1 flex flex-col items-center justify-center relative z-10">
+             {pieData.length > 0 ? (
+               <div className="relative w-full h-[220px]">
                  <ResponsiveContainer width="100%" height="100%">
                    <PieChart>
-                     <Pie
-                       data={pieData}
-                       cx="50%"
-                       cy="50%"
-                       innerRadius={60}
-                       outerRadius={80}
-                       paddingAngle={5}
-                       dataKey="value"
-                     >
-                       {pieData.map((entry, index) => (
-                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                     <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={8} dataKey="value">
+                       {pieData.map((_, index) => (
+                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="focus:outline-none" />
                        ))}
                      </Pie>
                      <Tooltip />
                    </PieChart>
                  </ResponsiveContainer>
                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <p className="text-2xl font-black text-white">{data?.orders?.total || 0}</p>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase">Pipeline</p>
+                    <p className="text-3xl font-black text-white leading-none">{data?.orders?.total || 0}</p>
+                    <p className="text-[10px] text-blue-400 font-black uppercase mt-2">Active Units</p>
                  </div>
                </div>
              ) : (
-               <div className="text-center text-slate-600 py-10">
-                  <Package size={40} className="mx-auto mb-4 opacity-10" />
-                  <p className="text-xs">Pipeline empty</p>
+               <div className="text-center text-slate-700 py-10">
+                  <Package size={40} className="mx-auto mb-4 opacity-20" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Pipeline Empty</p>
                </div>
              )}
 
-             <div className="w-full mt-8 space-y-4">
-                {orderStatusData.map((s, idx) => (
-                  <div key={s.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx] }} />
-                    <span className="text-xs font-black text-slate-800 uppercase tracking-widest">{s.label}</span>
-                  </div>
-                  <span className="text-sm font-black text-slate-900">{s.count}</span>
+             <div className="w-full mt-10 grid grid-cols-2 gap-4">
+                {['Pending', 'Processing', 'Shipped', 'Completed'].map((label, idx) => (
+                  <div key={label} className="p-4 bg-white/5 rounded-3xl border border-white/5">
+                    <div className="flex items-center gap-2 mb-1">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx] }} />
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+                    </div>
+                    <span className="text-xl font-black text-white">
+                      {idx === 0 ? data?.orders?.pending : idx === 1 ? data?.orders?.processing : idx === 2 ? data?.orders?.shipped : data?.orders?.completed}
+                    </span>
                   </div>
                 ))}
              </div>
           </div>
         </div>
       </div>
-
-       {/* AI Insight Log Matrix */}
-       {!loadingInsights && insights && (
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {insights.insights.map((insight: any) => (
-              <motion.div 
-                key={insight.id}
-                whileHover={{ y: -2 }}
-                className="card p-6 bg-white border-slate-200 shadow-sm flex gap-5 hover:border-blue-500/30 transition-all group"
-              >
-                 <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm border", 
-                   insight.type === 'trend' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-blue-50 text-blue-600 border-blue-100'
-                 )}>
-                    {insight.type === 'trend' ? <TrendingUp size={20} strokeWidth={2.5} /> : <Zap size={20} strokeWidth={2.5} />}
-                 </div>
-                 <div>
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 group-hover:text-blue-600 transition-colors">
-                      {insight.type === 'trend' ? 'Behavior Sync' : 'Revenue Optimization'}
-                    </h3>
-                    <p className="text-sm text-slate-800 font-bold leading-tight uppercase tracking-tight">{insight.text}</p>
-                 </div>
-              </motion.div>
-            ))}
-         </div>
-       )}
     </motion.div>
   );
 }

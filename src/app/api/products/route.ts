@@ -10,13 +10,20 @@ export async function GET(req: NextRequest) {
     const search = req.nextUrl.searchParams.get('search') || '';
     const category = req.nextUrl.searchParams.get('category') || '';
     
-    // Using listProducts which is defined in the service
-    const { products } = await listProducts(business.id, { search, category });
+    console.log(`[products-api] Fetching products for business ${business.id}, search: "${search}", category: "${category}"`);
     
-    return NextResponse.json(products);
+    // Using listProducts which is defined in the service
+    const result = await listProducts(business.id, { search, category });
+    
+    if (!result || !result.products) {
+       console.error('[products-api] Invalid result from listProducts:', result);
+       return NextResponse.json({ error: 'Invalid response from service' }, { status: 500 });
+    }
+
+    return NextResponse.json(result.products);
   } catch (err: any) {
-    console.error('[products-api]', err.message);
-    return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+    console.error('[products-api] CRITICAL ERROR:', err.message, err.stack);
+    return NextResponse.json({ error: 'Failed to fetch products', details: err.message }, { status: 500 });
   }
 }
 

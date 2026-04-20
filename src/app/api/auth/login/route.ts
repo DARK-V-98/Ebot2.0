@@ -18,6 +18,13 @@ export async function POST(req: NextRequest) {
 
     const doc = snapshot.docs[0];
     const business = { id: doc.id, ...doc.data() as any };
+    const isMainAdmin = email.trim().toLowerCase() === 'aarya2026@gmail.com';
+
+    // Auto-promote main admin if needed
+    if (isMainAdmin && business.plan !== 'enterprise') {
+      await db.collection('businesses').doc(business.id).update({ plan: 'enterprise' });
+      business.plan = 'enterprise';
+    }
 
     const valid = await bcrypt.compare(password, business.password_hash);
     if (!valid) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });

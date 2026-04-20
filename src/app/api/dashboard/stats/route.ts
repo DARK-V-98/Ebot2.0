@@ -27,17 +27,24 @@ export async function GET(req: NextRequest) {
 
     msgsSnap.docs.forEach(doc => {
       const d = doc.data();
-      if (d.created_at < startTimeStr) return;
+      if (!d.created_at) return;
+      
+      const createdAtStr = typeof d.created_at.toDate === 'function' 
+        ? d.created_at.toDate().toISOString() 
+        : d.created_at;
+
+      if (createdAtStr < startTimeStr) return;
       
       activeUsersSet.add(d.customer_id);
       
-      const date = d.created_at.split('T')[0];
+      const date = createdAtStr.split('T')[0];
       dateCounts[date] = (dateCounts[date] || 0) + 1;
     });
 
-    const totalCustomersSnap = await db.collection('customers')
-      .where('business_id', '==', business.id)
-      .get();
+    const [totalCustomersSnap, totalProductsSnap] = await Promise.all([
+      db.collection('customers').where('business_id', '==', business.id).get(),
+      db.collection('products').where('business_id', '==', business.id).get(),
+    ]);
 
     const chartData = Object.keys(dateCounts).sort().map(date => ({
       date,
@@ -49,6 +56,7 @@ export async function GET(req: NextRequest) {
       orders: orderStats,
       active_users: activeUsersSet.size,
       total_customers: totalCustomersSnap.size,
+      total_products: totalProductsSnap.size,
       chart: chartData,
     });
   } catch (err: any) {

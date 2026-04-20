@@ -19,12 +19,14 @@ export async function POST(req: NextRequest) {
     const apiKey = crypto.randomBytes(32).toString('hex');
     const now = new Date().toISOString();
 
+    const isMainAdmin = email.trim().toLowerCase() === 'aarya2026@gmail.com';
+
     await db.collection('businesses').add({
       name,
       email: email.trim().toLowerCase(),
       password_hash: hash,
       api_key: apiKey,
-      plan: 'free',
+      plan: isMainAdmin ? 'enterprise' : 'free',
       is_active: 1,
       created_at: now,
       updated_at: now

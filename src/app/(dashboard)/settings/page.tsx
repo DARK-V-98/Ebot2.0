@@ -2,14 +2,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { 
-  Globe, Key, MessageSquare, ShieldCheck, Mail, User, 
-  Settings as SettingsIcon, Bot, Zap, Save, Copy, Check, ChevronRight, Layers, HelpCircle, X,
-  Link2, Database, Infinity as InfinityIcon, Share2
+  Globe, Key, MessageSquare, ShieldCheck, User, 
+  Settings as SettingsIcon, Zap, Save, Copy, Check, ChevronRight, HelpCircle, X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { updateSettings } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import clsx from 'clsx';
 
 function SettingsCard({ title, subtitle, icon: Icon, children, onSave, loading, color = "blue" }: any) {
   const colorMap: any = {
@@ -22,7 +20,7 @@ function SettingsCard({ title, subtitle, icon: Icon, children, onSave, loading, 
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card p-0 overflow-hidden bg-white border-slate-200 shadow-xl"
+      className="card p-0 overflow-hidden bg-white border-slate-200 shadow-xl rounded-[40px]"
     >
       <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white">
         <div className="flex items-center gap-5">
@@ -56,54 +54,16 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
 
-  const [syncData, setSyncData] = useState({
-    external_inventory_url: (business as any)?.external_inventory_url || '',
-    external_inventory_key: (business as any)?.external_inventory_key || '',
-    external_inventory_header: (business as any)?.external_inventory_header || 'x-api-key',
-    inventory_priority: (business as any)?.inventory_priority || 'hybrid', 
-    db_host: (business as any)?.db_host || '',
-    db_user: (business as any)?.db_user || '',
-    db_pass: (business as any)?.db_pass || '',
-    db_name: (business as any)?.db_name || '',
-    db_query: (business as any)?.db_query || 'SELECT id, name, price, description, category, stock, image_url FROM products WHERE is_active = 1',
-    ext_fb_project_id: (business as any)?.ext_fb_project_id || '',
-    ext_fb_client_email: (business as any)?.ext_fb_client_email || '',
-    ext_fb_private_key: (business as any)?.ext_fb_private_key || '',
-    ext_fb_collection: (business as any)?.ext_fb_collection || 'products',
-    external_categories_url: (business as any)?.external_categories_url || '',
-    external_categories_key: (business as any)?.external_categories_key || '',
-    external_categories_header: (business as any)?.external_categories_header || 'x-api-key',
-  });
-
   const [metaData, setMetaData] = useState({
     name: business?.name || '',
-    whatsapp_phone_id: business?.whatsapp_phone_id || '',
+    whatsapp_phone_id: (business as any)?.whatsapp_phone_id || '',
     whatsapp_token: (business as any)?.whatsapp_token || '',
   });
 
-  const [syncLoading, setSyncLoading] = useState(false);
   const [metaLoading, setMetaLoading] = useState(false);
 
   useEffect(() => {
     if (business) {
-      setSyncData({
-        external_inventory_url: (business as any).external_inventory_url || '',
-        external_inventory_key: (business as any).external_inventory_key || '',
-        external_inventory_header: (business as any).external_inventory_header || 'x-api-key',
-        inventory_priority: (business as any).inventory_priority || 'hybrid',
-        db_host: (business as any).db_host || '',
-        db_user: (business as any).db_user || '',
-        db_pass: (business as any).db_pass || '',
-        db_name: (business as any).db_name || '',
-        db_query: (business as any).db_query || 'SELECT id, name, price, description, category, stock, image_url FROM products WHERE is_active = 1',
-        ext_fb_project_id: (business as any).ext_fb_project_id || '',
-        ext_fb_client_email: (business as any).ext_fb_client_email || '',
-        ext_fb_private_key: (business as any).ext_fb_private_key || '',
-        ext_fb_collection: (business as any).ext_fb_collection || 'products',
-        external_categories_url: (business as any).external_categories_url || '',
-        external_categories_key: (business as any).external_categories_key || '',
-        external_categories_header: (business as any).external_categories_header || 'x-api-key',
-      });
       setMetaData({
         name: business.name || '',
         whatsapp_phone_id: (business as any).whatsapp_phone_id || '',
@@ -111,18 +71,6 @@ export default function SettingsPage() {
       });
     }
   }, [business]);
-
-  const handleSaveSync = async () => {
-    setSyncLoading(true);
-    try {
-      await updateSettings(syncData);
-      toast.success('Inventory settings updated');
-    } catch (err) {
-      toast.error('Sync update failed');
-    } finally {
-      setSyncLoading(false);
-    }
-  };
 
   const handleSaveMeta = async () => {
     setMetaLoading(true);
@@ -151,13 +99,10 @@ export default function SettingsPage() {
     <div className="max-w-4xl space-y-12 animate-slide-up pb-32">
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">System Parameters</h1>
-          <p className="text-slate-500 text-xs font-black uppercase tracking-widest flex items-center gap-2">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2 leading-none">System Parameters</h1>
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mt-4">
              <SettingsIcon size={14} className="text-blue-600" /> Platform Engineering
           </p>
-        </div>
-        <div className="badge-blue flex items-center gap-2 px-4 py-2">
-           <Zap size={12} className="fill-current" /> All Nodes Operational
         </div>
       </div>
 
@@ -245,267 +190,8 @@ export default function SettingsPage() {
           </div>
         </SettingsCard>
 
-        <SettingsCard 
-          title="Data Bridge" 
-          subtitle="Synchronize External Inventory" 
-          icon={Globe} 
-          onSave={handleSaveSync}
-          loading={syncLoading}
-          color="blue"
-        >
-          {/* Inventory Strategy Toggle */}
-          <div className="space-y-4 mb-4">
-             <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Inventory Routing Protocol</label>
-             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {[
-                   { id: 'api', label: 'API EXCLUSIVE', sub: 'Ext. REST API' },
-                   { id: 'local', label: 'FIREBASE LOCAL', sub: 'Project DB' },
-                   { id: 'fb_ext', label: 'FIREBASE EXT', sub: 'Remote Project' },
-                   { id: 'sql', label: 'SQL DIRECT', sub: 'Remote SQL DB' },
-                   { id: 'hybrid', label: 'HYBRID NODE', sub: 'Merge Sources' }
-                ].map((mode) => (
-                   <button
-                      key={mode.id}
-                      onClick={() => setSyncData({ ...syncData, inventory_priority: mode.id as any })}
-                      className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-2 text-center group ${
-                         syncData.inventory_priority === mode.id 
-                         ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/20' 
-                         : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
-                      }`}
-                   >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                         syncData.inventory_priority === mode.id ? 'bg-white/20' : 'bg-slate-50'
-                      }`}>
-                         <div className={`w-2 h-2 rounded-full ${
-                            syncData.inventory_priority === mode.id ? 'bg-white animate-pulse' : 'bg-slate-300'
-                         }`} />
-                      </div>
-                      <span className="text-[9px] font-black uppercase tracking-widest">{mode.label}</span>
-                      <span className={`text-[8px] font-bold uppercase opacity-60 leading-none`}>{mode.sub}</span>
-                   </button>
-                ))}
-             </div>
-          </div>
-
-          <div className="space-y-4">
-             <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-[32px] flex items-center justify-between">
-                <div>
-                   <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">REST API Link</p>
-                   <h3 className="text-xs font-black text-slate-900">External Inventory Endpoint</h3>
-                </div>
-                <div className="w-10 h-10 rounded-2xl bg-white border border-blue-200 flex items-center justify-center text-blue-600 shadow-sm">
-                   <Link2 size={18} />
-                </div>
-             </div>
-             
-             <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Inventory API Endpoint (URL)</label>
-               <input 
-                 type="url" 
-                 value={syncData.external_inventory_url}
-                 onChange={e => setSyncData({ ...syncData, external_inventory_url: e.target.value })}
-                 placeholder="https://yourwebsite.com/api/products" 
-                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-black placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/40 transition-all text-sm" 
-               />
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                 <div className="space-y-2">
-                   <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">API Authentication Key</label>
-                   <div className="relative group">
-                     <Key size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-                     <input 
-                       type="password" 
-                       value={syncData.external_inventory_key}
-                       onChange={e => setSyncData({ ...syncData, external_inventory_key: e.target.value })}
-                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-14 pr-4 text-slate-900 font-black focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all text-sm" 
-                     />
-                   </div>
-                 </div>
-                 <div className="space-y-2">
-                   <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Target Header Name</label>
-                   <input 
-                     type="text" 
-                     value={syncData.external_inventory_header}
-                     onChange={e => setSyncData({ ...syncData, external_inventory_header: e.target.value })}
-                     placeholder="x-api-key" 
-                     className="w-full bg-slate-100 text-blue-600 font-black border border-slate-200 rounded-2xl py-4 px-6 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all text-sm uppercase tracking-widest shadow-inner" 
-                   />
-                 </div>
-               </div>
-             </div>
-          </div>
-        </SettingsCard>
-
-        {/* Restore: External Firebase Bridge */}
-        <SettingsCard 
-          title="Neural Sync" 
-          subtitle="Direct Connection to External Firebase Project" 
-          icon={InfinityIcon} 
-          onSave={handleSaveSync}
-          loading={syncLoading}
-          color="orange"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-             <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Remote Project ID</label>
-                <input 
-                  type="text" 
-                  value={syncData.ext_fb_project_id}
-                  onChange={e => setSyncData({ ...syncData, ext_fb_project_id: e.target.value })}
-                  placeholder="e.g. your-website-project" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-black focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all text-sm" 
-                />
-             </div>
-             <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Target Collection Name</label>
-                <input 
-                  type="text" 
-                  value={syncData.ext_fb_collection}
-                  onChange={e => setSyncData({ ...syncData, ext_fb_collection: e.target.value })}
-                  placeholder="e.g. products" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-black focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all text-sm" 
-                />
-             </div>
-          </div>
-
-          <div className="space-y-2">
-             <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Client Email (Service Account)</label>
-             <input 
-               type="text" 
-               value={syncData.ext_fb_client_email}
-               onChange={e => setSyncData({ ...syncData, ext_fb_client_email: e.target.value })}
-               className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all text-sm" 
-             />
-          </div>
-
-          <div className="space-y-2">
-             <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Private Key (Service Account)</label>
-             <textarea 
-               rows={4}
-               value={syncData.ext_fb_private_key}
-               onChange={e => setSyncData({ ...syncData, ext_fb_private_key: e.target.value })}
-               placeholder="-----BEGIN PRIVATE KEY-----\n..."
-               className="w-full bg-slate-900 text-orange-400 font-mono text-[10px] p-6 rounded-[32px] border border-slate-800 focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all leading-relaxed" 
-             />
-          </div>
-        </SettingsCard>
-
-        {/* Restore: SQL Database Bridge */}
-        <SettingsCard 
-          title="Digital Backbone" 
-          subtitle="Direct Remote SQL Connection (MySQL/MariaDB)" 
-          icon={Database} 
-          onSave={handleSaveSync}
-          loading={syncLoading}
-          color="orange"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-             <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Database Host (IP/Domain)</label>
-                <input 
-                  type="text" 
-                  value={syncData.db_host}
-                  onChange={e => setSyncData({ ...syncData, db_host: e.target.value })}
-                  placeholder="localhost or 192.168.1.5" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-black focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all text-sm" 
-                />
-             </div>
-             <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Schema Name (Database)</label>
-                <input 
-                  type="text" 
-                  value={syncData.db_name}
-                  onChange={e => setSyncData({ ...syncData, db_name: e.target.value })}
-                  placeholder="e.g. shop_database" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-black focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all text-sm" 
-                />
-             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-             <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Database User</label>
-                <input 
-                  type="text" 
-                  value={syncData.db_user}
-                  onChange={e => setSyncData({ ...syncData, db_user: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-black focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all text-sm" 
-                />
-             </div>
-             <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Database Password</label>
-                <input 
-                  type="password" 
-                  value={syncData.db_pass}
-                  onChange={e => setSyncData({ ...syncData, db_pass: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-black focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all text-sm" 
-                />
-             </div>
-          </div>
-
-          <div className="space-y-2 pt-4">
-             <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Custom Extraction Query (SQL)</label>
-                <span className="text-[8px] font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100 uppercase tracking-widest">Read Only Access</span>
-             </div>
-             <textarea 
-               rows={4}
-               value={syncData.db_query}
-               onChange={e => setSyncData({ ...syncData, db_query: e.target.value })}
-               className="w-full bg-slate-900 text-orange-400 font-mono text-xs p-8 rounded-[40px] border border-slate-800 focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 transition-all leading-relaxed shadow-2xl" 
-             />
-             <p className="text-[9px] text-slate-400 font-bold ml-4">
-                Tip: Use <code className="text-orange-600">WHERE stock &gt; 0</code> to prevent listing sold-out items. Ensure columns map to: <span className="text-slate-600 underline">id, name, price, description, category, stock, image_url</span>.
-             </p>
-          </div>
-        </SettingsCard>
-
-        <SettingsCard 
-          title="Classification Matrix" 
-          subtitle="Independent Category Synchronization" 
-          icon={Layers} 
-          onSave={handleSaveSync}
-          loading={syncLoading}
-          color="purple"
-        >
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Category API Endpoint (URL)</label>
-            <input 
-              type="url" 
-              value={syncData.external_categories_url}
-              onChange={e => setSyncData({ ...syncData, external_categories_url: e.target.value })}
-              placeholder="https://yourwebsite.com/api/categories (Optional)" 
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-black placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-purple-500/40 transition-all text-sm" 
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Optional Category API Key</label>
-              <div className="relative group">
-                <Key size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-purple-600 transition-colors" />
-                <input 
-                  type="password" 
-                  value={syncData.external_categories_key}
-                  onChange={e => setSyncData({ ...syncData, external_categories_key: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-14 pr-4 text-slate-900 font-black focus:outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500/50 transition-all text-sm" 
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-1">Auth Header Name</label>
-              <input 
-                type="text" 
-                value={syncData.external_categories_header}
-                onChange={e => setSyncData({ ...syncData, external_categories_header: e.target.value })}
-                placeholder="x-api-key" 
-                className="w-full bg-slate-100 text-purple-600 font-black border border-slate-200 rounded-2xl py-4 px-6 focus:outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500/50 transition-all text-sm uppercase tracking-widest shadow-inner" 
-              />
-            </div>
-          </div>
-        </SettingsCard>
-
         {/* Global Access Key Section */}
-        <div className="card p-1 bg-white border-slate-200 shadow-2xl relative overflow-hidden group">
+        <div className="card p-1 bg-white border-slate-200 shadow-2xl relative overflow-hidden group rounded-[40px]">
            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-100 transition-colors" />
            <div className="p-10 relative z-10">
               <div className="flex items-center gap-6 mb-10">
@@ -540,7 +226,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Hard Reset Section */}
-        <div className="card p-1 bg-white border-red-100 shadow-2xl relative overflow-hidden group">
+        <div className="card p-1 bg-white border-red-100 shadow-2xl relative overflow-hidden group rounded-[40px]">
            <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-red-100 transition-colors" />
            <div className="p-10 relative z-10">
               <div className="flex items-center gap-6 mb-10">
@@ -562,7 +248,7 @@ export default function SettingsPage() {
                  </div>
                  <button 
                     onClick={async () => {
-                       if (confirm('⚠️ ARMAGEDDON PROTOCOL: Are you 100% sure you want to permanently delete all messages, customers, notifications, and active sessions in your Database? This action is irreversible.')) {
+                       if (confirm('⚠️ ARMAGEDDON PROTOCOL: Are you 100% sure you want to permanently delete all messages, customers, notifications, and active sessions?')) {
                           try {
                             const res = await fetch('/api/developer/clear-chats', { method: 'POST' });
                             if (res.ok) toast.success('Database NUKED. Chats Cleared.');
@@ -571,7 +257,7 @@ export default function SettingsPage() {
                             toast.error('Network error during reset.');
                           }
                        }
-                    }}
+                     }}
                     className="flex-shrink-0 w-full md:w-auto py-5 px-10 bg-red-600 hover:bg-red-700 text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-red-500/30 transition-all flex items-center justify-center gap-3 active:scale-95"
                  >
                     <X size={16} /> Clear All Chats & Data
@@ -611,7 +297,7 @@ export default function SettingsPage() {
                     <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-black text-slate-400">1</div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-2">Create Meta Developer Account</h3>
                     <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                       Go to <a href="https://developers.facebook.com" target="_blank" className="text-blue-600 underline">developers.facebook.com</a>, login with your Facebook account and complete the developer registration.
+                       Go to <a href="https://developers.facebook.com" target="_blank" className="text-blue-600 underline">developers.facebook.com</a>, login and complete registration.
                     </p>
                  </div>
 
@@ -620,7 +306,7 @@ export default function SettingsPage() {
                     <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-black text-slate-400">2</div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-2">Create a Business App</h3>
                     <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                       Click &ldquo;Create App&rdquo; &rarr; Select &ldquo;Other&rdquo; &rarr; Select &ldquo;Business&rdquo; as the type. Give your app a name and associate it with a Business Portfolio.
+                       Click &ldquo;Create App&rdquo; &rarr; Select &ldquo;Other&rdquo; &rarr; Select &ldquo;Business&rdquo; as the type. Associate with a Business Portfolio.
                     </p>
                  </div>
 
@@ -629,10 +315,10 @@ export default function SettingsPage() {
                     <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-black text-slate-400">3</div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-2">Configure WhatsApp Product</h3>
                     <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                       Inside your app dashboard, find &ldquo;WhatsApp&rdquo; and click &ldquo;Set up&rdquo;. Connect your official business phone number in the &ldquo;Getting Started&rdquo; section.
+                       Inside your app dashboard, find &ldquo;WhatsApp&rdquo; and click &ldquo;Set up&rdquo;. Connect your phone number in the &ldquo;Getting Started&rdquo; section.
                     </p>
                     <div className="mt-4 p-4 bg-amber-50 rounded-2xl border border-amber-100 italic text-[11px] text-amber-700 font-medium">
-                       &ldquo;Copy the <strong>Phone Number ID</strong> from here and paste it into our Settings page.&rdquo;
+                       &ldquo;Copy the <strong>Phone Number ID</strong> and paste it into our Settings page.&rdquo;
                     </div>
                  </div>
 
@@ -653,9 +339,6 @@ export default function SettingsPage() {
                           <strong>Verify Token:</strong> Paste our Verification Secret.
                        </li>
                     </ul>
-                    <p className="text-[10px] text-slate-400 mt-4 leading-relaxed bg-slate-50 p-4 rounded-xl">
-                      IMPORTANT: After saving, click &ldquo;Manage&rdquo; next to Webhook Fields and <strong>subscribe to &apos;messages&apos;</strong> event.
-                    </p>
                  </div>
 
                  {/* Step 5 */}
@@ -663,16 +346,16 @@ export default function SettingsPage() {
                     <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-black text-white shadow-blue-500/20 shadow-lg">5</div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-2">Generate System User Token</h3>
                     <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                       Do not use a temporary token! Go to Business Settings &rarr; Users &rarr; System Users. Add a user, and click &ldquo;Generate Token&rdquo;.
+                       Do not use temporary tokens! Go to Business Settings &rarr; Users &rarr; System Users &rarr; Generate Token.
                     </p>
                     <div className="mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-[11px] text-emerald-700 font-bold">
-                       Select &apos;whatsapp_business_messaging&apos; permission. Copy that token and paste it into the <strong>Meta Access Token</strong> field.
+                       Select &apos;whatsapp_business_messaging&apos;. Paste it into the <strong>Meta Access Token</strong> field.
                     </div>
                  </div>
               </div>
 
               <div className="p-8 border-t border-slate-100 bg-white shrink-0">
-                 <button onClick={() => setShowGuide(false)} className="btn-primary w-full py-4 text-xs font-black tracking-widest uppercase">
+                 <button onClick={() => setShowGuide(false)} className="btn-primary w-full py-4 text-xs font-black tracking-widest uppercase rounded-2xl">
                     I Have Configured Everything
                  </button>
               </div>

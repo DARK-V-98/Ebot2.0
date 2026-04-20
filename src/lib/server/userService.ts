@@ -63,7 +63,7 @@ export async function listUsers(businessId: string, { page = 1, limit = 20, role
   const offset = (page - 1) * limit;
   const snapshot = await query.get();
   
-  let docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+  let docs = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() as any }));
   
   // Sort in memory
   docs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());

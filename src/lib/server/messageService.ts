@@ -20,7 +20,7 @@ export async function getHistory(customerId: string, limit = 20) {
     .limit(limit * 2) // Fetch a bit more to be sure
     .get();
 
-  const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+  const messages = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() as any }));
   
   // Sort in memory by created_at DESC
   messages.sort((a, b) => {
@@ -42,7 +42,7 @@ export async function listConversations(businessId: string, { page = 1, limit = 
   const offset = (page - 1) * limit;
   let snapshot = await query.orderBy('updated_at', 'desc').offset(offset).limit(limit).get();
   
-  let customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+  let customersData = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() as any }));
 
   if (search) {
     // Basic client-side filtering if search is provided
@@ -56,9 +56,9 @@ export async function listConversations(businessId: string, { page = 1, limit = 
       .where('customer_id', '==', c.id)
       .get();
       
-    const allMsgs = msgsRef.docs.map(doc => doc.data());
+    const allMsgs = msgsRef.docs.map((doc: any) => doc.data());
     allMsgs.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-    const lastMsg = allMsgs.length > 0 ? allMsgs[0] : null;
+    const lastMsg = allMsgs.length > 0 ? allMsgs[0] : null as any;
     const countSnapshot = await db.collection('messages')
       .where('customer_id', '==', c.id)
       .get();
@@ -85,7 +85,7 @@ export async function getCustomerMessages(businessId: string, customerId: string
     .where('customer_id', '==', customerId)
     .get();
 
-  let messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  let messages = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
   
   // Sort ascending by created_at in memory
   messages.sort((a: any, b: any) => {
@@ -125,7 +125,7 @@ export async function getMessageStats(businessId: string) {
     .where('business_id', '==', businessId)
     .get();
 
-  const todayCount = todaySnap.docs.filter(doc => (doc.data().created_at || '') >= todayStartStr.toISOString()).length;
+  const todayCount = todaySnap.docs.filter((doc: any) => (doc.data().created_at || '') >= todayStartStr.toISOString()).length;
 
   return { today: todayCount, total: totalSnap.data().count, incoming: inSnap.data().count };
 }

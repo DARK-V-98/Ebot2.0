@@ -8,9 +8,10 @@ const genAI = new GoogleGenerativeAI(cleanKey(process.env.GEMINI_API_KEY || ''))
 
 export async function detectLanguageAndIntent(messageText: string) {
   const geminiModels = [
+    'models/gemini-2.5-flash',
+    'models/gemini-2.5-pro',
     'gemini-1.5-flash',
     'gemini-1.5-pro',
-    'gemini-pro'
   ];
 
   const prompt = `
@@ -60,9 +61,10 @@ Rules:
 
 export async function generateReply({ userMessage, language, intent, businessName, products, categories, sessionContext, history }: any) {
   const geminiModels = [
+    'models/gemini-2.5-flash',
+    'models/gemini-2.5-pro',
     'gemini-1.5-flash',
     'gemini-1.5-pro',
-    'gemini-pro'
   ];
 
   // SMART FILTERING: Only show full details for relevant products (max 10)

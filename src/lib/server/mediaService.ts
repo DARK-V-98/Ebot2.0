@@ -25,6 +25,8 @@ export interface MediaInfo {
  */
 export async function analyzeImageWithVision(base64Data: string, mimetype: string): Promise<string> {
   const geminiModels = [
+    'models/gemini-2.5-flash',
+    'models/gemini-2.5-pro',
     'gemini-1.5-flash',
     'gemini-1.5-pro',
   ];

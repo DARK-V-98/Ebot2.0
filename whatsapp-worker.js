@@ -161,7 +161,6 @@ async function processQueuedMessages(jid, pushName) {
     const headers = { 'Authorization': 'Bearer dev-token' };
 
     const urls = [
-      'http://127.0.0.1:3000',
       process.env.NEXT_PUBLIC_SITE_URL
     ].filter(Boolean);
 
@@ -169,8 +168,8 @@ async function processQueuedMessages(jid, pushName) {
     for (const url of urls) {
       if (replied) break;
       try {
-        console.log(`📡 Sending to: ${url}/api/simulator`);
-        const response = await axios.post(`${url}/api/simulator`, payload, { headers, timeout: 60000 });
+        console.log(`📡 Sending to: ${url}/api/chat`);
+        const response = await axios.post(`${url}/api/chat`, payload, { headers, timeout: 60000 });
         const { reply, products, replyButtons, interactiveType, welcomeReply } = response.data;
 
         if (welcomeReply) {
@@ -234,7 +233,8 @@ async function processQueuedMessages(jid, pushName) {
           replied = true;
         }
       } catch (err) { 
-        console.error(`⚠️  URL Failed: ${url}`);
+        console.error(`⚠️  URL Failed: ${url}/api/chat | Error: ${err.response?.status || err.message}`);
+        if (err.response?.data) console.error(`   Details:`, JSON.stringify(err.response.data).substring(0, 100));
       }
     }
     
@@ -271,16 +271,15 @@ async function processMediaMessage(jid, pushName, msg, mediaInfo) {
     const headers = { 'Authorization': 'Bearer dev-token' };
 
     const urls = [
-      process.env.NEXT_PUBLIC_SITE_URL,
-      'http://127.0.0.1:3000'
+      process.env.NEXT_PUBLIC_SITE_URL
     ].filter(Boolean);
 
     let replied = false;
     for (const url of urls) {
       if (replied) break;
       try {
-        console.log(`📡 Sending media to: ${url}/api/simulator/media`);
-        const response = await axios.post(`${url}/api/simulator/media`, payload, { headers, timeout: 90000 });
+        console.log(`📡 Sending media to: ${url}/api/chat/media`);
+        const response = await axios.post(`${url}/api/chat/media`, payload, { headers, timeout: 90000 });
         const { reply } = response.data;
 
         if (reply) {
@@ -289,7 +288,8 @@ async function processMediaMessage(jid, pushName, msg, mediaInfo) {
           replied = true;
         }
       } catch (err) {
-        console.error(`⚠️  Media URL Failed: ${url}`, err.message);
+        console.error(`⚠️  Media URL Failed: ${url}/api/chat/media | Error: ${err.response?.status || err.message}`);
+        if (err.response?.data) console.error(`   Details:`, JSON.stringify(err.response.data).substring(0, 100));
       }
     }
 
@@ -323,9 +323,16 @@ async function startBot() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  const snapshot = await db.collection('businesses').where('email', '==', TARGET_EMAIL).limit(1).get();
-  if (snapshot.empty) return console.error("❌ Business record missing in database.");
-  const bizRef = snapshot.docs[0].ref;
+  let bizRef = null;
+  try {
+    const snapshot = await db.collection('businesses').where('email', '==', TARGET_EMAIL).limit(1).get();
+    if (!snapshot.empty) bizRef = snapshot.docs[0].ref;
+    else console.error("❌ Business record missing in database.");
+  } catch (err) {
+    console.error("⚠️  Database Lookup Failed (init queries issue). Retrying in 5s...", err.message);
+    setTimeout(startBot, 5000);
+    return;
+  }
 
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
@@ -353,6 +360,7 @@ async function startBot() {
     if (!msg.message || msg.key.fromMe) return;
 
     const jid = msg.key.remoteJid;
+    if (jid === 'status@broadcast') return; // Ignore status updates
     
     // --- CHECK FOR MEDIA MESSAGES FIRST ---
     const mediaInfo = getMediaType(msg);

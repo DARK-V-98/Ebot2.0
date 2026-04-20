@@ -17,11 +17,18 @@ export async function saveMessage({ businessId, customerId, message, direction, 
 export async function getHistory(customerId: string, limit = 20) {
   const snapshot = await db.collection('messages')
     .where('customer_id', '==', customerId)
-    .orderBy('created_at', 'desc')
-    .limit(limit)
+    .limit(limit * 2) // Fetch a bit more to be sure
     .get();
 
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).reverse();
+  const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+  
+  // Sort in memory by created_at DESC
+  messages.sort((a, b) => {
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  });
+
+  return messages.slice(0, limit).reverse();
+}
 }
 
 export async function listConversations(businessId: string, { page = 1, limit = 20, search = '' } = {}) {
@@ -48,11 +55,11 @@ export async function listConversations(businessId: string, { page = 1, limit = 
   const conversations = await Promise.all(customersData.map(async (c) => {
     const msgsRef = await db.collection('messages')
       .where('customer_id', '==', c.id)
-      .orderBy('created_at', 'desc')
-      .limit(1)
       .get();
       
-    const lastMsg = msgsRef.empty ? null : msgsRef.docs[0].data();
+    const allMsgs = msgsRef.docs.map(doc => doc.data());
+    allMsgs.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    const lastMsg = allMsgs.length > 0 ? allMsgs[0] : null;
     const countSnapshot = await db.collection('messages')
       .where('customer_id', '==', c.id)
       .get();
@@ -117,9 +124,9 @@ export async function getMessageStats(businessId: string) {
   
   const todaySnap = await db.collection('messages')
     .where('business_id', '==', businessId)
-    .where('created_at', '>=', todayStartStr.toISOString())
-    .count()
     .get();
 
-  return { today: todaySnap.data().count, total: totalSnap.data().count, incoming: inSnap.data().count };
+  const todayCount = todaySnap.docs.filter(doc => (doc.data().created_at || '') >= todayStartStr.toISOString()).length;
+
+  return { today: todayCount, total: totalSnap.data().count, incoming: inSnap.data().count };
 }

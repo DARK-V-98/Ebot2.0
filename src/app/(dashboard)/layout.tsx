@@ -19,7 +19,6 @@ const NAV_ITEMS = [
   { href: '/products', label: 'Inventory', icon: Package },
   { href: '/customers', label: 'Aarya Partners', icon: Users },
   { href: '/whatsapp', label: 'Bot Channel', icon: ShieldCheck },
-  { href: '/simulator', label: 'AI Simulator', icon: Bot },
   { href: '/settings', label: 'Control Center', icon: Settings },
 ];
 

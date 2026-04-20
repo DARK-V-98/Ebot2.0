@@ -61,22 +61,26 @@ export async function listUsers(businessId: string, { page = 1, limit = 20, role
   }
 
   const offset = (page - 1) * limit;
-  const snapshot = await query.orderBy('createdAt', 'desc').offset(offset).limit(limit).get();
-  const totalSnap = await query.count().get();
+  const snapshot = await query.get();
+  
+  let docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+  
+  // Sort in memory
+  docs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
-  const users = await Promise.all(snapshot.docs.map(async (doc: any) => {
-    const data = doc.data();
-    // Count orders for each user
-    const ordersSnap = await db.collection('orders').where('userId', '==', doc.id).count().get();
+  const total = docs.length;
+  const paginatedDocs = docs.slice(offset, offset + limit);
+
+  const users = await Promise.all(paginatedDocs.map(async (docData) => {
+    const ordersSnap = await db.collection('orders').where('userId', '==', docData.id).count().get();
 
     return {
-      id: doc.id,
-      ...data,
+      ...docData,
       total_orders: ordersSnap.data().count,
     };
   }));
 
-  return { users, total: totalSnap.data().count, page, limit };
+  return { users, total, page, limit };
 }
 
 export async function getCustomer(businessId: string, userId: string) {

@@ -64,7 +64,7 @@ export async function listUsers(businessId: string, { page = 1, limit = 20, role
   const snapshot = await query.orderBy('createdAt', 'desc').offset(offset).limit(limit).get();
   const totalSnap = await query.count().get();
 
-  const users = await Promise.all(snapshot.docs.map(async doc => {
+  const users = await Promise.all(snapshot.docs.map(async (doc: any) => {
     const data = doc.data();
     // Count orders for each user
     const ordersSnap = await db.collection('orders').where('userId', '==', doc.id).count().get();

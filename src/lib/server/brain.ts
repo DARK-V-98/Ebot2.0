@@ -66,7 +66,7 @@ export async function processMediaMessage({ businessId, phone, contactName, medi
 
   // Search for products based on image description
   if (media.type === 'image' && media.transcription) {
-    const keywords = (media.transcription || '').split(' ').filter(w => w.length > 3);
+    const keywords = (media.transcription || '').split(' ').filter((w: string) => w.length > 3);
     products = await productService.searchProducts(businessId, keywords, 3);
   }
 
@@ -155,7 +155,7 @@ export async function processMessage({ businessId, phone, contactName, messageTe
   } else if (textLower === '4' || ['human', 'help', 'support', 'owner'].includes(textLower)) {
     intent = 'handover';
     skipAI = true;
-  } else if (['times', 'opening', 'hours', 'open'].some(k => textLower.includes(k))) {
+  } else if (['times', 'opening', 'hours', 'open'].some((k: string) => textLower.includes(k))) {
     intent = 'opening_times';
     skipAI = true;
   }

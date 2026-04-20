@@ -25,21 +25,18 @@ export interface MediaInfo {
  */
 export async function analyzeImageWithVision(base64Data: string, mimetype: string): Promise<string> {
   const geminiModels = [
-    'models/gemini-2.5-flash',
-    'models/gemini-2.5-pro',
-    'models/gemini-flash-latest',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
   ];
 
   // Strip data URL prefix if present
   const rawBase64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
 
-  const prompt = `You are analyzing an image sent by a customer in a WhatsApp commerce chat. 
-Describe what you see briefly in 1-2 sentences. Focus on:
-- If it's a product photo: identify the product type, brand if visible, condition
-- If it's a screenshot: what it contains (receipt, order, etc.)
-- If it's a location/map: describe the area
-- Otherwise: brief general description
-Keep it concise and helpful for a sales assistant context.`;
+  const prompt = `You are the Expert Vision System for "Aarya Bathware". Analyze this customer image. 
+Identify the specific bathware/hardware item (e.g., Faucet, Jaky Valve, Pipe, Sink, Shower head). 
+Describe its features (material, color, handle shape, brand if any). 
+Your description will be matched against our warehouse inventory to find a match.`;
+
 
   for (const modelName of geminiModels) {
     try {

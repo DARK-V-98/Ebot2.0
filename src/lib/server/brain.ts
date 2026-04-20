@@ -60,19 +60,22 @@ export async function processMediaMessage({ businessId, phone, contactName, medi
     whatsappMsgId,
   });
 
-  const session: any = await getSession(user.id);
-  if (session.state === 'handover') return null;
-
   const history = await messageService.getHistory(user.id, 10);
   let mediaContext = `User sent a ${media.type}. `;
   if (media.type === 'image') mediaContext += `Analysis: "${media.transcription}"`;
 
+  // Search for products based on image description
+  if (media.type === 'image' && media.transcription) {
+    const keywords = (media.transcription || '').split(' ').filter(w => w.length > 3);
+    products = await productService.searchProducts(businessId, keywords, 3);
+  }
+
   const reply = await aiService.generateReply({
     userMessage: mediaContext,
     language: user.language || 'english',
-    intent: 'unknown',
+    intent: 'search_product',
     businessName,
-    products: [],
+    products,
     sessionContext: { state: session.state },
     history,
   });
@@ -104,10 +107,42 @@ export async function processMessage({ businessId, phone, contactName, messageTe
   let intent = 'unknown';
   let skipAI = false;
 
-  // Manual Intercepts & Numeric Menu
-  if (['hi', 'hello', 'hey', 'start'].includes(textLower)) {
+  // --- STATE-BASED NUMERIC INTERCEPTS ---
+  const isNumber = /^\d+$/.test(textLower);
+  const selectionInt = isNumber ? parseInt(textLower) : -1;
+
+  if (['hi', 'hello', 'hey', 'start', '0'].includes(textLower)) {
     intent = 'greeting';
     skipAI = true;
+    await updateSession(user.id, 'idle', {});
+  } else if (textLower === 'back') {
+    if (session.state === 'browsing_category') {
+      intent = 'browse_menu';
+      await updateSession(user.id, 'choosing_category', {});
+    } else if (session.state === 'viewing_product') {
+      // Go back to category list if we were in one, else back to menu
+      intent = context.last_category ? 'view_category' : 'browse_menu';
+      if (context.last_category) {
+        textLower = context.last_category; // simulate selecting the category again
+      }
+    } else {
+      intent = 'greeting';
+    }
+    skipAI = true;
+  } else if (session.state === 'choosing_category' && isNumber) {
+    const selectedCat = context.listed_categories?.[selectionInt - 1];
+    if (selectedCat) {
+      intent = 'view_category';
+      context.current_category = selectedCat;
+      skipAI = true;
+    }
+  } else if (session.state === 'browsing_category' && isNumber) {
+    const selectedProdId = context.listed_product_ids?.[selectionInt - 1];
+    if (selectedProdId) {
+      intent = 'view_product';
+      context.current_product_id = selectedProdId;
+      skipAI = true;
+    }
   } else if (textLower === '1' || ['menu', 'categories', 'browse'].includes(textLower)) {
     intent = 'browse_menu';
     skipAI = true;
@@ -115,13 +150,10 @@ export async function processMessage({ businessId, phone, contactName, messageTe
     intent = 'search_product';
     skipAI = true;
   } else if (textLower === '3' || ['location', 'address', 'where', 'map'].includes(textLower)) {
-    intent = 'location'; // Usually redirects to same as opening_times
+    intent = 'location';
     skipAI = true;
   } else if (textLower === '4' || ['human', 'help', 'support', 'owner'].includes(textLower)) {
     intent = 'handover';
-    skipAI = true;
-  } else if (textLower === 'view_website') {
-    intent = 'view_website';
     skipAI = true;
   } else if (['times', 'opening', 'hours', 'open'].some(k => textLower.includes(k))) {
     intent = 'opening_times';
@@ -134,23 +166,6 @@ export async function processMessage({ businessId, phone, contactName, messageTe
     intent = aiResult.intent;
   }
 
-  await messageService.saveMessage({
-    businessId,
-    customerId: user.id,
-    message: messageText,
-    direction: 'in',
-    intent,
-    language,
-    whatsappMsgId,
-  });
-
-  if (session.state === 'handover' && intent !== 'cancel') {
-    return null; 
-  }
-
-  const history = await messageService.getHistory(user.id, 10);
-  const isFirstContact = history.length === 0;
-
   let products: any[] = [];
   let interactiveType: 'none' | 'reply_buttons' | 'list' | 'cta' | 'image' = 'none';
   let replyButtons: { id: string; title: string }[] = [];
@@ -159,10 +174,6 @@ export async function processMessage({ businessId, phone, contactName, messageTe
   let reply = '';
   let welcomeReply = '';
 
-  if (isFirstContact && intent !== 'greeting') {
-    welcomeReply = `👋 Hello! Welcome to ${businessName}. I'm Aarya, your AI assistant. ✨\n\nGive me a moment while I look that up for you... 🕵️‍♀️`;
-  }
-
   const OPENING_TIMES = `🏪 Opening Hours:
 • Monday - Friday: 9:00 AM – 4:30 PM
 • Saturday: Open 24 hours 🕒
@@ -170,13 +181,54 @@ export async function processMessage({ businessId, phone, contactName, messageTe
 
   switch (intent) {
     case 'greeting':
-      reply = `👋 Welcome to ${businessName}! 🚿✨\n\nHow can I help you today? Please choose an option:\n\n1️⃣ Browse Categories 🛍️\n2️⃣ Search Product 🔍\n3️⃣ Location & Times 📍\n4️⃣ Human Support 👨‍💼\n\nYou can reply with the number or just tell me what you need!`;
+      reply = `👋 Welcome to ${businessName}! 🚿✨\n\nHow can I help you today? Please choose an option:\n\n1️⃣ Browse Categories 🛍️\n2️⃣ Search Product 🔍\n3️⃣ Location & Times 📍\n4️⃣ Human Support 👨‍💼\n\nYou can reply with the number or just tell me!`;
       interactiveType = 'reply_buttons';
       replyButtons = [
         { id: 'browse_menu', title: '🛍️ Categories' },
         { id: 'search', title: '🔍 Search Product' },
         { id: 'opening_times', title: '📍 Location & Times' },
       ];
+      break;
+
+    case 'browse_menu':
+      const cats = await productService.getCategories(businessId);
+      context.listed_categories = cats;
+      reply = `🛍️ *Our Categories*\n\nPlease select a category number (e.g., reply with 1):\n\n` + 
+              cats.map((c: string, i: number) => `${i + 1}️⃣ ${c}`).join('\n') + 
+              `\n\n0️⃣ Back to Main Menu`;
+      await updateSession(user.id, 'choosing_category', context);
+      break;
+
+    case 'view_category':
+      const catName = context.current_category;
+      context.last_category = catName;
+      const catProducts = await productService.listProducts(businessId, { category: catName, limit: 20 });
+      context.listed_product_ids = catProducts.products.map((p: any) => p.id);
+      
+      reply = `📂 *Products in ${catName}*\n\n` + 
+              catProducts.products.map((p: any, i: number) => `${i + 1}️⃣ ${p.name} - Rs. ${p.price}`).join('\n') + 
+              `\n\n🔙 Reply *Back* to Categories\n0️⃣ Home`;
+      
+      await updateSession(user.id, 'browsing_category', context);
+      break;
+
+    case 'view_product':
+      const prod = await productService.getProduct(businessId, context.current_product_id);
+      if (prod) {
+        const stockStatus = prod.stock > 0 ? '✅ In Stock' : '❌ Out of Stock';
+        reply = `✨ *${prod.name}*\n\n` +
+                `💰 Price: Rs. ${prod.price}\n` +
+                `📂 Category: ${prod.category}\n` +
+                `📦 Status: ${stockStatus}\n\n` +
+                `📝 Details: ${prod.description || 'Premium quality bathware component.'}\n\n` +
+                `🔙 Reply *Back* to list\n0️⃣ Home`;
+        
+        products = [prod];
+        interactiveType = 'image';
+        await updateSession(user.id, 'viewing_product', context);
+      } else {
+        reply = "Sorry, I couldn't find that product details.";
+      }
       break;
 
     case 'opening_times':
@@ -187,55 +239,30 @@ export async function processMessage({ businessId, phone, contactName, messageTe
       break;
 
     case 'search_product':
-      const keywords = (await aiService.detectLanguageAndIntent(messageText)).extracted_keywords;
-      products = await productService.searchProducts(businessId, keywords, 5);
-      if (products.length === 1 && products[0].image_url) {
+      const aiDetect = await aiService.detectLanguageAndIntent(messageText);
+      products = await productService.searchProducts(businessId, aiDetect.extracted_keywords, 5);
+      if (products.length === 0) {
+        reply = "I couldn't find exactly that. You can browse our categories or send me a photo!";
+      } else if (products.length === 1 && products[0].image_url) {
+        const p = products[0];
+        reply = `🔍 I found this: *${p.name}*\nPrice: Rs. ${p.price}\n\nWould you like more details?`;
         interactiveType = 'image';
-        replyButtons = [
-             { id: 'view_website', title: '🌐 View on Website' },
-             { id: 'browse_menu', title: '🛍️ Browse More' }
-        ];
+      } else {
+        reply = `🔍 I found these items for you:\n\n` + 
+                products.map((p: any, i: number) => `• ${p.name} - Rs. ${p.price}`).join('\n') +
+                `\n\nTry searching for something more specific!`;
       }
       break;
 
-    case 'location':
-      reply = `📍 Visit us at Aarya Bathware in Kottawa!\n\n${OPENING_TIMES}\n\nGoogle Maps: ${DEFAULT_MAP_URL}`;
-      interactiveType = 'cta';
-      ctaUrl = DEFAULT_MAP_URL;
-      ctaButtonText = '📍 Google Maps';
-      break;
-
-    case 'view_website':
-      reply = `You can explore our full collection and prices on our official website:`;
-      interactiveType = 'cta';
-      ctaUrl = DEFAULT_WEBSITE_URL;
-      ctaButtonText = '🌐 Visit Website';
-      break;
-
     case 'handover':
-      reply = `I'll connect you with a human agent. Please wait a moment... 👨‍💼`;
+      reply = `I'll connect you with our support team. Please wait... 👨‍💼`;
       await updateSession(user.id, 'handover', context);
-      await notificationService.createNotification({
-        businessId,
-        type: 'handover_request',
-        title: `🚨 ${contactName || phone} requested support`,
-        body: `Customer needs human assistance.`,
-        link: '/conversations',
-        customerId: user.id,
-        customerName: contactName || phone,
-      });
-      break;
-      
-    case 'browse_menu':
-      reply = "I can show you our top categories. Which one would you like to see?";
-      const cats = await productService.getCategories(businessId);
-      // Simplify: just show top categories
       break;
   }
 
-  const categories = await productService.getCategories(businessId);
-
   if (!reply) {
+    const history = await messageService.getHistory(user.id, 5);
+    const categories = await productService.getCategories(businessId);
     reply = await aiService.generateReply({
       userMessage: messageText,
       language: language,
@@ -244,7 +271,7 @@ export async function processMessage({ businessId, phone, contactName, messageTe
       products,
       categories,
       sessionContext: { state: session.state, ...context },
-      history: history.slice(-5),
+      history,
     });
   }
 

@@ -8,11 +8,9 @@ const genAI = new GoogleGenerativeAI(cleanKey(process.env.GEMINI_API_KEY || ''))
 
 export async function detectLanguageAndIntent(messageText: string) {
   const geminiModels = [
-    'models/gemini-2.5-flash',
-    'models/gemini-2.5-pro',
-    'models/gemini-3.1-pro-preview',
-    'models/gemini-flash-latest',
-    'models/gemini-pro-latest'
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+    'gemini-pro'
   ];
 
   const prompt = `
@@ -62,10 +60,9 @@ Rules:
 
 export async function generateReply({ userMessage, language, intent, businessName, products, categories, sessionContext, history }: any) {
   const geminiModels = [
-    'models/gemini-2.5-flash',
-    'models/gemini-2.5-pro',
-    'models/gemini-1.5-flash-latest',
-    'models/gemini-1.5-pro-latest'
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+    'gemini-pro'
   ];
 
   // SMART FILTERING: Only show full details for relevant products (max 10)
@@ -125,12 +122,17 @@ ${historyText}
 Relevant products (Current Selection from Database):
 ${productContextText}
 
+🔥 PRODUCT MATCHING RULES:
+1. If the customer sent an image (UserMessage starts with "User sent a image") AND the "Current Selection" above shows "No products found", you MUST say: "I couldn't identify this specific item in our current inventory. Please contact us via call at 076 123 4567 to send more details or check for custom orders! 📞"
+2. If products are found, identify which one looks closest to the image and describe it.
+
 Customer's message: "${userMessage}"
 
 Respond naturally based on the intent:
 - search_product → Describe the items enthusiastically. Mention prices. Say "I'm sending the selection menu to you right now! 👇".
-- buying_interest → If they say "I want to buy", congratulate them on their choice and kindly explain that for security, all orders must be placed on our official website (aaryabathware.com) or at our shop in Kottawa.
-- unknown → Use your best judgment. Read between the lines. If they are asking for advice, act as a consultant.
+- buying_interest → Congratulate them and redirect to Website (https://aaryabathware.com) or Shop in Kottawa.
+- unknown → Act as a helpful consultant.
+- BACK BUTTON: Frequently remind the customer they can reply with "Back" to see the previous menu or "0" for the main menu.
 `;
 
   // Try Gemini models first

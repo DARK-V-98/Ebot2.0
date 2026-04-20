@@ -29,7 +29,6 @@ export async function getHistory(customerId: string, limit = 20) {
 
   return messages.slice(0, limit).reverse();
 }
-}
 
 export async function listConversations(businessId: string, { page = 1, limit = 20, search = '' } = {}) {
   // In a real app we'd need specialized chat queries. For a unified app using Firestore:

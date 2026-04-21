@@ -246,6 +246,7 @@ export async function processMessage({ businessId, phone, contactName, messageTe
       }
       break;
 
+    case 'location':
     case 'opening_times':
       reply = `${OPENING_TIMES}\n\n📍 *Our Address:*\n${DEFAULT_ADDRESS}\n\n🗺️ Find us on Google Maps: ${DEFAULT_MAP_URL}\n\n🌐 Website: ${DEFAULT_WEBSITE_URL}`;
       interactiveType = 'cta';
@@ -323,7 +324,27 @@ export async function processMessage({ businessId, phone, contactName, messageTe
   });
 
   if (!isSimulation && reply) {
-    await whatsappService.sendMessage(businessId, phone, reply);
+    try {
+      if (intent === 'opening_times') {
+        const part1 = `${OPENING_TIMES}\n\n📍 *Our Address:*\n${DEFAULT_ADDRESS}`;
+        await whatsappService.sendMessage(businessId, phone, part1);
+        
+        const part2 = `🗺️ Find us on Google Maps: ${DEFAULT_MAP_URL}\n\n🌐 Website: ${DEFAULT_WEBSITE_URL}`;
+        await whatsappService.sendCTAButton(businessId, phone, part2, ctaButtonText || '📍 Google Maps', ctaUrl);
+      } else if (interactiveType === 'reply_buttons' && replyButtons.length > 0) {
+        await whatsappService.sendReplyButtons(businessId, phone, reply, replyButtons);
+      } else if (interactiveType === 'cta' && ctaUrl) {
+        await whatsappService.sendCTAButton(businessId, phone, reply, ctaButtonText || 'Open Link', ctaUrl);
+      } else if (interactiveType === 'image' && products?.[0]?.image_url) {
+        await whatsappService.sendImageMessage(businessId, phone, products[0].image_url, reply);
+      } else {
+        await whatsappService.sendMessage(businessId, phone, reply);
+      }
+    } catch (err: any) {
+      console.error('[brain] Error sending live message:', err.message);
+      // Fallback to plain message if interactive fails
+      await whatsappService.sendMessage(businessId, phone, reply);
+    }
   }
 
   return { reply, products, interactiveType, replyButtons, welcomeReply };

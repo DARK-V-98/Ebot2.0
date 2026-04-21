@@ -14,8 +14,9 @@ export async function saveMessage({ businessId, customerId, message, direction, 
   return docRef.id;
 }
 
-export async function getHistory(customerId: string, limit = 20) {
+export async function getHistory(businessId: string, customerId: string, limit = 20) {
   const snapshot = await db.collection('messages')
+    .where('business_id', '==', businessId)
     .where('customer_id', '==', customerId)
     .limit(limit * 2) // Fetch a bit more to be sure
     .get();

@@ -62,7 +62,7 @@ export async function processMediaMessage({ businessId, phone, contactName, medi
   });
 
   const session: any = await getSession(user.id);
-  const history = await messageService.getHistory(user.id, 10);
+  const history = await messageService.getHistory(businessId, user.id, 10);
   let products: any[] = [];
   let mediaContext = `User sent a ${media.type}. `;
   if (media.type === 'image') mediaContext += `Analysis: "${media.transcription}"`;
@@ -104,6 +104,17 @@ export async function processMessage({ businessId, phone, contactName, messageTe
   const user: any = await userService.findOrCreateUserByPhone(phone, contactName);
   const session: any = await getSession(user.id);
   const context = session.context_json ? JSON.parse(session.context_json) : {};
+
+  // Save the incoming customer message FIRST (so history is accurate for this user)
+  await messageService.saveMessage({
+    businessId,
+    customerId: user.id,
+    message: messageText,
+    direction: 'in',
+    intent: null,
+    language: user.language || 'english',
+    whatsappMsgId,
+  });
 
   let textLower = messageText.toLowerCase().trim();
   let language = user.language || 'english';
@@ -271,7 +282,7 @@ export async function processMessage({ businessId, phone, contactName, messageTe
   }
 
   if (!reply) {
-    const history = await messageService.getHistory(user.id, 5);
+    const history = await messageService.getHistory(businessId, user.id, 5);
     const categories = await productService.getCategories(businessId);
     reply = await aiService.generateReply({
       userMessage: messageText,

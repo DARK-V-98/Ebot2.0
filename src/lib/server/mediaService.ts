@@ -38,7 +38,7 @@ export async function analyzeImageWithVision(base64Data: string, mimetype: strin
   const rawBase64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
 
   const prompt = `You are the Expert Vision System for "Aarya Bathware". Analyze this customer image. 
-Identify the specific bathware/hardware item (e.g., Faucet, Jaky Valve, Pipe, Sink, Shower head). 
+Identify the specific hardware/bathware item (e.g., Faucet, Jaky Valve, Pipe, Sink, Shower head). 
 Describe its features (material, color, handle shape, brand if any). 
 Your description will be matched against our warehouse inventory to find a match.`;
 

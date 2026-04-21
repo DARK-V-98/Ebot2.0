@@ -10,8 +10,9 @@ import * as correctionService from './correctionService';
 import { db } from '../firebase/firebaseAdmin';
 
 const DEFAULT_BUSINESS_NAME = "Aarya Bathware";
+const DEFAULT_ADDRESS = "Aarya Bathware, 80 Polgasowita Rd, Polgasowita 10240";
 const DEFAULT_MAP_URL = "https://maps.app.goo.gl/cckESsCgnYfe5jf77";
-const DEFAULT_WEBSITE_URL = "https://aaryabathware.com";
+const DEFAULT_WEBSITE_URL = "https://aaryahardware.lk";
 
 export async function getSession(userId: string) {
   const docRef = db.collection('sessions').doc(userId);
@@ -234,7 +235,7 @@ export async function processMessage({ businessId, phone, contactName, messageTe
                 `💰 Price: Rs. ${prod.price}\n` +
                 `📂 Category: ${prod.category}\n` +
                 `📦 Status: ${stockStatus}\n\n` +
-                `📝 Details: ${prod.description || 'Premium quality bathware component.'}\n\n` +
+                `📝 Details: ${prod.description || 'Premium quality hardware component.'}\n\n` +
                 `🔙 Reply *Back* to list\n0️⃣ Home`;
         
         products = [prod];
@@ -246,7 +247,7 @@ export async function processMessage({ businessId, phone, contactName, messageTe
       break;
 
     case 'opening_times':
-      reply = `${OPENING_TIMES}\n\n📍 Visit us at: ${DEFAULT_MAP_URL}`;
+      reply = `${OPENING_TIMES}\n\n📍 *Our Address:*\n${DEFAULT_ADDRESS}\n\n🗺️ Find us on Google Maps: ${DEFAULT_MAP_URL}\n\n🌐 Website: ${DEFAULT_WEBSITE_URL}`;
       interactiveType = 'cta';
       ctaUrl = DEFAULT_MAP_URL;
       ctaButtonText = '📍 Google Maps';

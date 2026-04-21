@@ -60,7 +60,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         "fixed inset-y-0 left-0 z-50 w-80 flex flex-col bg-slate-50 border-r border-slate-200 transition-transform duration-500 lg:relative lg:translate-x-0 shadow-2xl lg:shadow-none",
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
-        {/* Brand - Aarya Hardware */}
+        {/* Brand - Aarya Bathware */}
         <div className="p-10 pb-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg border border-slate-100 p-2">

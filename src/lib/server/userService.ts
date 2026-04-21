@@ -1,7 +1,7 @@
 import { db } from '../firebase/firebaseAdmin';
 
 /**
- * Aarya Hardware uses a 'users' collection for both admins and customers.
+ * Aarya Bathware uses a 'users' collection for both admins and customers.
  * field 'role' defines if they are an admin or a customer.
  */
 

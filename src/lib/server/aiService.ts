@@ -132,7 +132,7 @@ Relevant products (Current Selection from Database):
 ${productContextText}
 
 🔥 PRODUCT MATCHING RULES:
-1. If the customer sent an image (UserMessage starts with "User sent a image") AND the "Current Selection" above shows "No products found", you MUST say: "I couldn't identify this specific item in our current inventory. Please contact us via call at 076 123 4567 to send more details or check for custom orders! 📞"
+1. If the customer sent an image (UserMessage starts with "User sent a image") AND the "Current Selection" above shows "No products found", you MUST say: "I couldn't identify this specific item in our current inventory. Please contact us via call at 078 240 4099 to send more details or check for custom orders! 📞"
 2. If products are found, identify which one looks closest to the image and describe it.
 
 Customer's message: "${userMessage}"
